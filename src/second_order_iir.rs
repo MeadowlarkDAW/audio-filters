@@ -68,200 +68,110 @@ impl IIR2Coefficients<f64> {
             return Err(Errors::NegativeQ);
         }
 
+        let a;
+        let g;
+        let k;
+        let a1;
+        let a2;
+        let a3;
+        let m0;
+        let m1;
+        let m2;
+
         match filter {
-            IIR2Type::LowPass => {
-                let a = 1.0;
-                let g = tan(PI * f0 / fs);
-                let k = 1.0 / q_value;
-                let a1 = 1.0 / (1.0 + g * (g + k));
-                let a2 = g * a1;
-                let a3 = g * a2;
-                let m0 = 0.0;
-                let m1 = 0.0;
-                let m2 = 1.0;
-                Ok(IIR2Coefficients {
-                    a,
-                    g,
-                    gpow2: g * g,
-                    k,
-                    a1,
-                    a2,
-                    a3,
-                    m0,
-                    m1,
-                    m2,
-                    fs,
-                })
-            }
-            IIR2Type::HighPass => {
-                let a = 1.0;
-                let g = tan(PI * f0 / fs);
-                let k = 1.0 / q_value;
-                let a1 = 1.0 / (1.0 + g * (g + k));
-                let a2 = g * a1;
-                let a3 = g * a2;
-                let m0 = 1.0;
-                let m1 = -k;
-                let m2 = -1.0;
-                Ok(IIR2Coefficients {
-                    a,
-                    g,
-                    gpow2: g * g,
-                    k,
-                    a1,
-                    a2,
-                    a3,
-                    m0,
-                    m1,
-                    m2,
-                    fs,
-                })
-            }
-            IIR2Type::BandPass => {
-                let a = 1.0;
-                let g = tan(PI * f0 / fs);
-                let k = 1.0 / q_value;
-                let a1 = 1.0 / (1.0 + g * (g + k));
-                let a2 = g * a1;
-                let a3 = g * a2;
-                let m0 = 0.0;
-                let m1 = 1.0;
-                let m2 = 0.0;
-                Ok(IIR2Coefficients {
-                    a,
-                    g,
-                    gpow2: g * g,
-                    k,
-                    a1,
-                    a2,
-                    a3,
-                    m0,
-                    m1,
-                    m2,
-                    fs,
-                })
-            }
-            IIR2Type::Notch => {
-                let a = 1.0;
-                let g = tan(PI * f0 / fs);
-                let k = 1.0 / q_value;
-                let a1 = 1.0 / (1.0 + g * (g + k));
-                let a2 = g * a1;
-                let a3 = g * a2;
-                let m0 = 1.0;
-                let m1 = -k;
-                let m2 = 0.0;
-                Ok(IIR2Coefficients {
-                    a,
-                    g,
-                    gpow2: g * g,
-                    k,
-                    a1,
-                    a2,
-                    a3,
-                    m0,
-                    m1,
-                    m2,
-                    fs,
-                })
-            }
-            IIR2Type::AllPass => {
-                let a = 1.0;
-                let g = tan(PI * f0 / fs);
-                let k = 1.0 / q_value;
-                let a1 = 1.0 / (1.0 + g * (g + k));
-                let a2 = g * a1;
-                let a3 = g * a2;
-                let m0 = 1.0;
-                let m1 = -2.0 * k;
-                let m2 = 0.0;
-                Ok(IIR2Coefficients {
-                    a,
-                    g,
-                    gpow2: g * g,
-                    k,
-                    a1,
-                    a2,
-                    a3,
-                    m0,
-                    m1,
-                    m2,
-                    fs,
-                })
+            IIR2Type::LowPass
+            | IIR2Type::HighPass
+            | IIR2Type::AllPass
+            | IIR2Type::BandPass
+            | IIR2Type::Notch => {
+                a = 1.0;
+                g = tan(PI * f0 / fs);
+                k = 1.0 / q_value;
+                a1 = 1.0 / (1.0 + g * (g + k));
+                a2 = g * a1;
+                a3 = g * a2;
             }
             IIR2Type::LowShelf(db_gain) => {
-                let a = pow(10.0f64, db_gain / 40.0);
-                let g = tan(PI * f0 / fs) / sqrt(a);
-                let k = 1.0 / q_value;
-                let a1 = 1.0 / (1.0 + g * (g + k));
-                let a2 = g * a1;
-                let a3 = g * a2;
-                let m0 = 1.0;
-                let m1 = k * (a - 1.0);
-                let m2 = a * a - 1.0;
-                Ok(IIR2Coefficients {
-                    a,
-                    g,
-                    gpow2: g * g,
-                    k,
-                    a1,
-                    a2,
-                    a3,
-                    m0,
-                    m1,
-                    m2,
-                    fs,
-                })
+                a = pow(10.0f64, db_gain / 40.0);
+                g = tan(PI * f0 / fs) / sqrt(a);
+                k = 1.0 / q_value;
+                a1 = 1.0 / (1.0 + g * (g + k));
+                a2 = g * a1;
+                a3 = g * a2;
             }
             IIR2Type::HighShelf(db_gain) => {
-                let a = pow(10.0f64, db_gain / 40.0);
-                let g = tan(PI * f0 / fs) * sqrt(a);
-                let k = 1.0 / q_value;
-                let a1 = 1.0 / (1.0 + g * (g + k));
-                let a2 = g * a1;
-                let a3 = g * a2;
-                let m0 = a * a;
-                let m1 = k * (1.0 - a) * a;
-                let m2 = 1.0 - a * a;
-                Ok(IIR2Coefficients {
-                    a,
-                    g,
-                    gpow2: g * g,
-                    k,
-                    a1,
-                    a2,
-                    a3,
-                    m0,
-                    m1,
-                    m2,
-                    fs,
-                })
+                a = pow(10.0f64, db_gain / 40.0);
+                g = tan(PI * f0 / fs) * sqrt(a);
+                k = 1.0 / q_value;
+                a1 = 1.0 / (1.0 + g * (g + k));
+                a2 = g * a1;
+                a3 = g * a2;
             }
             IIR2Type::PeakingEQ(db_gain) => {
-                let a = pow(10.0f64, db_gain / 40.0);
-                let g = tan(PI * f0 / fs);
-                let k = 1.0 / (q_value * a);
-                let a1 = 1.0 / (1.0 + g * (g + k));
-                let a2 = g * a1;
-                let a3 = g * a2;
-                let m0 = 1.0;
-                let m1 = k * (a * a - 1.0);
-                let m2 = 0.0;
-                Ok(IIR2Coefficients {
-                    a,
-                    g,
-                    gpow2: g * g,
-                    k,
-                    a1,
-                    a2,
-                    a3,
-                    m0,
-                    m1,
-                    m2,
-                    fs,
-                })
+                a = pow(10.0f64, db_gain / 40.0);
+                g = tan(PI * f0 / fs);
+                k = 1.0 / (q_value * a);
+                a1 = 1.0 / (1.0 + g * (g + k));
+                a2 = g * a1;
+                a3 = g * a2;
             }
-        }
+        };
+
+        match filter {
+            IIR2Type::LowPass => {
+                m0 = 0.0;
+                m1 = 0.0;
+                m2 = 1.0;
+            }
+            IIR2Type::HighPass => {
+                m0 = 1.0;
+                m1 = -k;
+                m2 = -1.0;
+            }
+            IIR2Type::BandPass => {
+                m0 = 0.0;
+                m1 = 1.0;
+                m2 = 0.0;
+            }
+            IIR2Type::Notch => {
+                m0 = 1.0;
+                m1 = -k;
+                m2 = 0.0;
+            }
+            IIR2Type::AllPass => {
+                m0 = 1.0;
+                m1 = -2.0 * k;
+                m2 = 0.0;
+            }
+            IIR2Type::LowShelf(_) => {
+                m0 = 1.0;
+                m1 = k * (a - 1.0);
+                m2 = a * a - 1.0;
+            }
+            IIR2Type::HighShelf(_) => {
+                m0 = a * a;
+                m1 = k * (1.0 - a) * a;
+                m2 = 1.0 - a * a;
+            }
+            IIR2Type::PeakingEQ(_) => {
+                m0 = 1.0;
+                m1 = k * (a * a - 1.0);
+                m2 = 0.0;
+            }
+        };
+        Ok(IIR2Coefficients {
+            a,
+            g,
+            gpow2: g * g,
+            k,
+            a1,
+            a2,
+            a3,
+            m0,
+            m1,
+            m2,
+            fs,
+        })
     }
 }
 
