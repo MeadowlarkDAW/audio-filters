@@ -210,10 +210,10 @@ impl FilterBand {
         self.start_pole = if self.iir1_enabled { 1 } else { 0 } as usize;
         self.iir2_cascade_count = ((self.u_slope as usize + self.start_pole) / 2) as usize;
 
-        let partial_gain = gain / self.iir2_cascade_count as f64;
-
         let q_value = bw_value.bw_to_q(freq, sample_rate);
         let q_offset = q_value * FRAC_1_SQRT_2; //butterworth Q
+
+        let mut partial_gain = gain / self.u_slope as f64;
 
         if self.iir1_enabled {
             self.coeffs.iir1 = IIR1Coefficients::<f64>::from_params(
@@ -236,6 +236,8 @@ impl FilterBand {
             self.update_coeffs(self.coeffs);
             return;
         }
+
+        partial_gain *= 2.0;
 
         match self.kind {
             BandType::Bell => {
