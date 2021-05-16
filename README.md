@@ -1,2 +1,2 @@
-# audio-filters
-A collection of filters for real-time audio processing
+# Audio Filters
+A collection of `#![no_std]` filters for real-time audio processing
