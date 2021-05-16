@@ -1,7 +1,9 @@
+use core::f64::consts::PI;
+
 use libm::*;
 use num_complex::Complex;
 
-use crate::{consts::F64::PI, units::ZSample};
+use crate::units::ZSample;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Errors {

@@ -1,8 +1,7 @@
 #![no_std]
 
-pub mod consts;
 pub mod filter_band;
-mod first_order_iir;
+pub mod first_order_iir;
 pub mod second_order_iir;
 pub mod units;
 

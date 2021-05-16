@@ -1,6 +1,7 @@
-use num_complex::Complex;
+use core::f32;
+use core::f64;
 
-use crate::consts::{F32, F64};
+use num_complex::Complex;
 
 use libm::*;
 
@@ -36,7 +37,7 @@ impl Units<f64> for f64 {
         }
     }
     fn bw_to_q(self, _f0: f64, _fs: f64) -> f64 {
-        1.0 / (2.0 * sinh(F64::LN_2 / 2.0 * self))
+        1.0 / (2.0 * sinh(f64::consts::LN_2 / 2.0 * self))
     }
 }
 
@@ -62,21 +63,23 @@ impl Units<f32> for f32 {
         }
     }
     fn bw_to_q(self, _f0: f32, _fs: f32) -> f32 {
-        1.0 / (2.0 * sinhf(F32::LN_2 / 2.0 * self))
+        1.0 / (2.0 * sinhf(f32::consts::LN_2 / 2.0 * self))
     }
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct ZSample<T> {
+    pub z: Complex<T>,
     pub pow1: Complex<T>,
     pub pow2: Complex<T>,
 }
 
 impl ZSample<f64> {
     pub fn new(f_hz: f64, fs: f64) -> ZSample<f64> {
-        let z = -F64::TAU * f_hz / fs;
+        let z = -f64::consts::TAU * f_hz / fs;
         let z = cos(z) + sin(z) * Complex::new(0.0, 1.0);
         ZSample {
+            z,
             pow1: z,
             pow2: z * z,
         }
@@ -85,9 +88,10 @@ impl ZSample<f64> {
 
 impl ZSample<f32> {
     pub fn new(f_hz: f32, fs: f32) -> ZSample<f32> {
-        let z = -F32::TAU * f_hz / fs;
+        let z = -f32::consts::TAU * f_hz / fs;
         let z = cosf(z) + sinf(z) * Complex::new(0.0, 1.0);
         ZSample {
+            z,
             pow1: z,
             pow2: z * z,
         }
@@ -96,7 +100,7 @@ impl ZSample<f32> {
 
 pub fn butterworth_cascade_q(filter_order: u32, pole: u32) -> f64 {
     let mut pole = pole;
-    let pole_inc = F64::PI / (filter_order as f64);
+    let pole_inc = f64::consts::PI / (filter_order as f64);
     let even_order = filter_order % 2 == 0;
 
     let first_angle = if even_order {

@@ -1,9 +1,8 @@
-use core::fmt;
+use core::{f64::consts::FRAC_1_SQRT_2, fmt};
 
 use num_complex::Complex;
 
 use crate::{
-    consts::F64::FRAC_1_SQRT_2,
     second_order_iir::{IIR2Coefficients, IIR2Type, IIR2},
     units::{butterworth_cascade_q, Units, ZSample},
     MAX_POLE_COUNT,
