@@ -10,4 +10,4 @@ license = "MIT/Apache-2.0"
 
 [dependencies]
 libm = "0.2.1"
-num-complex = {version = "0.4", default-features = false}
+num-complex = {version = "0.4", feature = "libm"}
