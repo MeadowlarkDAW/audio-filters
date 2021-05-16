@@ -21,7 +21,7 @@ pub enum IIR2Type<DBGain> {
     AllPass,
     LowShelf(DBGain),
     HighShelf(DBGain),
-    PeakingEQ(DBGain),
+    Bell(DBGain),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -109,7 +109,7 @@ impl IIR2Coefficients<f64> {
                 a2 = g * a1;
                 a3 = g * a2;
             }
-            IIR2Type::PeakingEQ(db_gain) => {
+            IIR2Type::Bell(db_gain) => {
                 a = pow(10.0f64, db_gain / 40.0);
                 g = tan(PI * f0 / fs);
                 k = 1.0 / (q_value * a);
@@ -155,7 +155,7 @@ impl IIR2Coefficients<f64> {
                 m1 = k * (1.0 - a) * a;
                 m2 = 1.0 - a * a;
             }
-            IIR2Type::PeakingEQ(_) => {
+            IIR2Type::Bell(_) => {
                 m0 = 1.0;
                 m1 = k * (a * a - 1.0);
                 m2 = 0.0;

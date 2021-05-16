@@ -101,7 +101,7 @@ impl ZSample<f32> {
 pub fn butterworth_cascade_q(filter_order: u32, pole: u32) -> f64 {
     let mut pole = pole;
     let pole_inc = f64::consts::PI / (filter_order as f64);
-    let even_order = filter_order % 2 == 0;
+    let even_order = filter_order & 1 == 0;
 
     let first_angle = if even_order {
         pole_inc * 0.5
@@ -137,5 +137,6 @@ mod tests {
         assert_eq!(0.5176380902050415, butterworth_cascade_q(6, 0));
         assert_eq!(0.7071067811865475, butterworth_cascade_q(6, 1));
         assert_eq!(1.931851652578135, butterworth_cascade_q(6, 2));
+        dbg!(butterworth_cascade_q(5, 2));
     }
 }

@@ -50,14 +50,9 @@ impl IIR1Coefficients<f64> {
         filter: IIR1Type<f64>,
         fs: f64,
         f0: f64,
-        q_value: f64,
     ) -> Result<IIR1Coefficients<f64>, Errors> {
         if 2.0 * f0 > fs {
             return Err(Errors::OutsideNyquist);
-        }
-
-        if q_value < 0.0 {
-            return Err(Errors::NegativeQ);
         }
 
         let a;
