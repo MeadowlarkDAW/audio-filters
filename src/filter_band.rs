@@ -1,5 +1,3 @@
-use core::fmt;
-
 use crate::units::FP;
 use num_complex::Complex;
 
@@ -11,40 +9,6 @@ use crate::{
     units::{butterworth_cascade_q, Units, ZSample},
     MAX_POLE_COUNT,
 };
-
-#[derive(PartialEq, Debug, Clone, Copy)]
-pub enum BandType {
-    Bell,
-    LowPass,
-    HighPass,
-    LowShelf,
-    HighShelf,
-    Notch,
-    BandPass,
-    AllPass,
-}
-
-impl BandType {
-    pub fn from_u8(value: u8) -> BandType {
-        match value {
-            1 => BandType::Bell,
-            2 => BandType::LowPass,
-            3 => BandType::HighPass,
-            4 => BandType::LowShelf,
-            5 => BandType::HighShelf,
-            6 => BandType::Notch,
-            7 => BandType::BandPass,
-            8 => BandType::AllPass,
-            _ => BandType::LowPass,
-        }
-    }
-}
-
-impl fmt::Display for BandType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
 
 #[derive(Copy, Clone, Debug)]
 pub struct IIRCoefficientsSet<T: FP> {
@@ -72,27 +36,28 @@ impl<T: FP> IIRCoefficientsSet<T> {
             self.iir2[0].get_bode_sample(z)
         };
         for band_a in self.iir2.iter().skip(1) {
+            //TODO only do needed iir2 bands skip others
             y = y * band_a.get_bode_sample(z);
         }
         y
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct FilterBand<T: FP> {
     iir1: IIR1<T>,
     iir2: [IIR2<T>; MAX_POLE_COUNT],
     pub coeffs: IIRCoefficientsSet<T>,
-    kind: BandType,
-    freq: T,
+    f0: T,
     gain: T,
     bw_value: T,
     slope: T,
     u_slope: u8,
-    iir1_enabled: bool,
+    odd_order: bool,
     start_pole: usize,
     iir2_cascade_count: usize,
     sample_rate: T,
+    pub process: fn(&mut Self, T) -> T,
 }
 
 impl<T: FP> FilterBand<T> {
@@ -102,16 +67,16 @@ impl<T: FP> FilterBand<T> {
             iir1: IIR1::<T>::new(coeffs.iir1),
             iir2: [IIR2::<T>::new(coeffs.iir2[0]); MAX_POLE_COUNT],
             coeffs,
-            kind: BandType::Bell,
-            freq: T::zero(),
+            f0: T::zero(),
             gain: T::zero(),
             bw_value: T::zero(),
             slope: 2.0.into(),
+            odd_order: true,
             u_slope: 2,
-            iir1_enabled: false,
             start_pole: 0,
             iir2_cascade_count: 1,
             sample_rate: 48000.0.into(),
+            process: FilterBand::process_iir1_only,
         }
     }
 
@@ -120,20 +85,26 @@ impl<T: FP> FilterBand<T> {
         self.coeffs.get_bode_sample(z)
     }
 
-    pub fn process(&mut self, x: T) -> T {
-        let mut x = x;
+    pub fn process_iir1_only(&mut self, x: T) -> T {
+        self.iir1.process(x)
+    }
 
-        if self.iir1_enabled {
-            x = self.iir1.process(x);
+    pub fn process_iir2_only(&mut self, x: T) -> T {
+        self.iir2[0].process(x)
+    }
+
+    pub fn process_even_order_cascade(&mut self, x: T) -> T {
+        let mut x = x;
+        for i in self.start_pole..self.iir2_cascade_count {
+            x = self.iir2[i].process(x);
         }
-        if self.u_slope > 1 {
-            if self.kind == BandType::Bell || self.kind == BandType::Notch {
-                x = self.iir2[0].process(x);
-            } else {
-                for i in self.start_pole..self.iir2_cascade_count {
-                    x = self.iir2[i].process(x);
-                }
-            }
+        x
+    }
+
+    pub fn process_odd_order_cascade(&mut self, x: T) -> T {
+        let mut x = self.iir1.process(x);
+        for i in self.start_pole..self.iir2_cascade_count {
+            x = self.iir2[i].process(x);
         }
         x
     }
@@ -147,139 +118,207 @@ impl<T: FP> FilterBand<T> {
 
     pub fn mimic_band(&mut self, band: &FilterBand<T>) {
         self.coeffs = band.coeffs;
-        self.kind = band.kind;
-        self.freq = band.freq;
+        self.f0 = band.f0;
         self.gain = band.gain;
         self.bw_value = band.bw_value;
         self.slope = band.slope;
+        self.odd_order = band.odd_order;
         self.u_slope = band.u_slope;
-        self.iir1_enabled = band.iir1_enabled;
         self.start_pole = band.start_pole;
         self.iir2_cascade_count = band.iir2_cascade_count;
         self.sample_rate = band.sample_rate;
+        self.process = band.process;
         self.update_coeffs(self.coeffs);
     }
 
-    pub fn update(
-        &mut self,
-        kind: BandType,
-        in_freq: T,
-        in_gain: T,
-        in_bw_value: T,
-        slope: T,
-        fs: T,
-    ) {
-        if kind == self.kind
-            && in_freq == self.freq
-            && in_gain == self.gain
-            && in_bw_value == self.bw_value
-            && slope == self.slope
-            && fs == self.sample_rate
-        {
-            return;
-        }
-
-        self.kind = kind;
-        self.freq = in_freq;
-        self.gain = in_gain;
-        self.bw_value = in_bw_value;
+    fn set_params(&mut self, f0: T, gain: T, bw: T, slope: T, iir1_possible: bool, fs: T) {
+        self.f0 = f0;
+        self.gain = gain;
+        self.bw_value = bw;
         self.slope = slope;
         self.sample_rate = fs;
 
-        let f0 = self.freq;
-        let gain = self.gain;
-        let bw_value = self.bw_value;
-
         self.u_slope = NumCast::from(slope).unwrap();
 
-        let odd_order = self.u_slope & 1 == 1;
+        self.odd_order = self.u_slope & 1 == 1;
 
-        self.iir1_enabled = odd_order
-            && match kind {
-                BandType::LowPass => true,
-                BandType::HighPass => true,
-                BandType::LowShelf => true,
-                BandType::HighShelf => true,
-                BandType::AllPass => true,
-                BandType::BandPass => true,
-                _ => false,
-            };
-
-        self.coeffs.iir1_enabled = self.iir1_enabled;
-
-        self.start_pole = if self.iir1_enabled { 1 } else { 0 } as usize;
+        self.start_pole = if iir1_possible && self.odd_order {
+            1
+        } else {
+            0
+        } as usize;
         self.iir2_cascade_count = ((self.u_slope as usize + self.start_pole) / 2) as usize;
+    }
 
-        let q_value = bw_value.bw_to_q(f0, fs);
+    pub fn lowpass(&mut self, f0: T, bw: T, slope: T, fs: T) {
+        self.set_params(f0, T::zero(), bw, slope, true, fs);
+        if self.odd_order {
+            self.coeffs.iir1 = IIR1Coefficients::lowpass(f0, fs);
+            if self.u_slope <= 1 {
+                self.update_coeffs(self.coeffs);
+                self.process = FilterBand::process_iir1_only;
+                return;
+            }
+            self.process = FilterBand::process_odd_order_cascade;
+        } else {
+            self.process = FilterBand::process_even_order_cascade;
+        }
+        let q_value = bw.bw_to_q(f0, fs);
         let q_offset = q_value * T::FRAC_1_SQRT_2(); //butterworth Q
-
-        let mut partial_gain = gain / self.u_slope.into();
-
-        if self.iir1_enabled {
-            self.coeffs.iir1 = match kind {
-                BandType::LowPass => IIR1Coefficients::lowpass(f0, fs),
-                BandType::HighPass => IIR1Coefficients::highpass(f0, fs),
-                BandType::LowShelf => IIR1Coefficients::lowshelf(f0, partial_gain, fs),
-                BandType::HighShelf => IIR1Coefficients::highshelf(f0, partial_gain, fs),
-                BandType::AllPass => IIR1Coefficients::allpass(f0, fs),
-                _ => IIR1Coefficients::lowpass(f0, fs),
-            };
-        }
-
-        if self.u_slope <= 1 {
-            self.update_coeffs(self.coeffs);
-            return;
-        }
-
-        let two: T = 2.0.into();
-        partial_gain = partial_gain * two;
-
-        match self.kind {
-            BandType::Bell => {
-                self.coeffs.iir2[0] = IIR2Coefficients::bell(f0, q_value, gain, fs);
-            }
-            BandType::LowPass => {
-                for i in self.start_pole..self.iir2_cascade_count {
-                    let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::lowpass(f0, q_value * q_offset, fs);
-                }
-            }
-            BandType::HighPass => {
-                for i in self.start_pole..self.iir2_cascade_count {
-                    let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::highpass(f0, q_value * q_offset, fs);
-                }
-            }
-            BandType::LowShelf => {
-                for i in self.start_pole..self.iir2_cascade_count {
-                    let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] =
-                        IIR2Coefficients::lowshelf(f0, q_value * q_offset, partial_gain, fs);
-                }
-            }
-            BandType::HighShelf => {
-                for i in self.start_pole..self.iir2_cascade_count {
-                    let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] =
-                        IIR2Coefficients::highshelf(f0, q_value * q_offset, partial_gain, fs);
-                }
-            }
-            BandType::Notch => {
-                self.coeffs.iir2[0] = IIR2Coefficients::notch(f0, q_value * q_offset, fs);
-            }
-            BandType::BandPass => {
-                for i in self.start_pole..self.iir2_cascade_count {
-                    let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::bandpass(f0, q_value * q_offset, fs);
-                }
-            }
-            BandType::AllPass => {
-                for i in self.start_pole..self.iir2_cascade_count {
-                    let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::allpass(f0, q_value * q_offset, fs);
-                }
-            }
+        for i in self.start_pole..self.iir2_cascade_count {
+            let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
+            self.coeffs.iir2[i] = IIR2Coefficients::lowpass(f0, q_value * q_offset, fs);
         }
         self.update_coeffs(self.coeffs);
+    }
+
+    pub fn highpass(&mut self, f0: T, bw: T, slope: T, fs: T) {
+        self.set_params(f0, T::zero(), bw, slope, true, fs);
+        if self.odd_order {
+            self.coeffs.iir1 = IIR1Coefficients::highpass(f0, fs);
+            if self.u_slope <= 1 {
+                self.update_coeffs(self.coeffs);
+                self.process = FilterBand::process_iir1_only;
+                return;
+            }
+            self.process = FilterBand::process_odd_order_cascade;
+        } else {
+            self.process = FilterBand::process_even_order_cascade;
+        }
+        let q_value = bw.bw_to_q(f0, fs);
+        let q_offset = q_value * T::FRAC_1_SQRT_2(); //butterworth Q
+        for i in self.start_pole..self.iir2_cascade_count {
+            let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
+            self.coeffs.iir2[i] = IIR2Coefficients::highpass(f0, q_value * q_offset, fs);
+        }
+        self.update_coeffs(self.coeffs);
+    }
+
+    pub fn lowshelf(&mut self, f0: T, gain: T, bw: T, slope: T, fs: T) {
+        self.set_params(f0, gain, bw, slope, true, fs);
+        let mut partial_gain = gain / self.u_slope.into();
+        if self.odd_order {
+            self.coeffs.iir1 = IIR1Coefficients::lowshelf(f0, partial_gain, fs);
+            if self.u_slope <= 1 {
+                self.update_coeffs(self.coeffs);
+                self.process = FilterBand::process_iir1_only;
+                return;
+            }
+            self.process = FilterBand::process_odd_order_cascade;
+        } else {
+            self.process = FilterBand::process_even_order_cascade;
+        }
+        let q_value = bw.bw_to_q(f0, fs);
+        let q_offset = q_value * T::FRAC_1_SQRT_2(); //butterworth Q
+        partial_gain = partial_gain * Into::<T>::into(2.0);
+        for i in self.start_pole..self.iir2_cascade_count {
+            let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
+            self.coeffs.iir2[i] =
+                IIR2Coefficients::lowshelf(f0, q_value * q_offset, partial_gain, fs);
+        }
+        self.update_coeffs(self.coeffs);
+    }
+
+    pub fn highshelf(&mut self, f0: T, gain: T, bw: T, slope: T, fs: T) {
+        self.set_params(f0, gain, bw, slope, true, fs);
+        let mut partial_gain = gain / self.u_slope.into();
+        if self.odd_order {
+            self.coeffs.iir1 = IIR1Coefficients::highshelf(f0, partial_gain, fs);
+            if self.u_slope <= 1 {
+                self.update_coeffs(self.coeffs);
+                self.process = FilterBand::process_iir1_only;
+                return;
+            }
+            self.process = FilterBand::process_odd_order_cascade;
+        } else {
+            self.process = FilterBand::process_even_order_cascade;
+        }
+        let q_value = bw.bw_to_q(f0, fs);
+        let q_offset = q_value * T::FRAC_1_SQRT_2(); //butterworth Q
+        partial_gain = partial_gain * Into::<T>::into(2.0);
+        for i in self.start_pole..self.iir2_cascade_count {
+            let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
+            self.coeffs.iir2[i] =
+                IIR2Coefficients::highshelf(f0, q_value * q_offset, partial_gain, fs);
+        }
+        self.update_coeffs(self.coeffs);
+    }
+
+    pub fn notch(&mut self, f0: T, gain: T, bw: T, fs: T) {
+        let q_value = bw.bw_to_q(f0, fs);
+        self.set_params(f0, gain, bw, Into::<T>::into(2.0), false, fs);
+        self.coeffs.iir2[0] = IIR2Coefficients::notch(f0, q_value, fs);
+        self.process = FilterBand::process_iir2_only;
+        self.update_coeffs(self.coeffs);
+    }
+
+    pub fn bandpass(&mut self, f0: T, gain: T, bw: T, fs: T) {
+        let q_value = bw.bw_to_q(f0, fs);
+        self.set_params(f0, gain, bw, Into::<T>::into(2.0), false, fs);
+        self.coeffs.iir2[0] = IIR2Coefficients::bandpass(f0, q_value, fs);
+        self.process = FilterBand::process_iir2_only;
+        self.update_coeffs(self.coeffs);
+    }
+
+    pub fn allpass(&mut self, f0: T, bw: T, slope: T, fs: T) {
+        self.set_params(f0, T::zero(), bw, slope, true, fs);
+        if self.odd_order {
+            self.coeffs.iir1 = IIR1Coefficients::allpass(f0, fs);
+            if self.u_slope <= 1 {
+                self.update_coeffs(self.coeffs);
+                self.process = FilterBand::process_iir1_only;
+                return;
+            }
+            self.process = FilterBand::process_odd_order_cascade;
+        } else {
+            self.process = FilterBand::process_even_order_cascade;
+        }
+        let q_value = bw.bw_to_q(f0, fs);
+        let q_offset = q_value * T::FRAC_1_SQRT_2(); //butterworth Q
+        for i in self.start_pole..self.iir2_cascade_count {
+            let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
+            self.coeffs.iir2[i] = IIR2Coefficients::allpass(f0, q_value * q_offset, fs);
+        }
+        self.update_coeffs(self.coeffs);
+    }
+
+    pub fn bell(&mut self, f0: T, gain: T, bw: T, fs: T) {
+        let q_value = bw.bw_to_q(f0, fs);
+        self.set_params(f0, gain, bw, Into::<T>::into(2.0), false, fs);
+        self.coeffs.iir2[0] = IIR2Coefficients::bell(f0, q_value, gain, fs);
+        self.process = FilterBand::process_iir2_only;
+        self.update_coeffs(self.coeffs);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rand(x: f32) -> f32 {
+        ((x * 12.9898).sin() * 43758.5453).fract()
+    }
+
+    #[test]
+    fn it_works() {
+        let mut left: Vec<f32> = (0..1000).map(|x| rand(x as f32)).collect();
+        let mut right: Vec<f32> = (0..1000).map(|x| rand(x as f32)).collect();
+
+        let sample_rate = 48000.0;
+        let f0 = 1000.0;
+        let gain = 6.0;
+        let bandwidth = 1.0;
+        let slope = 4.0;
+
+        let mut filter_left = FilterBand::new(sample_rate);
+        let mut filter_right = FilterBand::new(sample_rate);
+
+        filter_left.highshelf(f0, gain, bandwidth, slope, sample_rate);
+        filter_right.mimic_band(&filter_left);
+
+        for i in 0..1000 {
+            left[i] = (filter_left.process)(&mut filter_left, left[i]);
+            right[i] = (filter_right.process)(&mut filter_right, right[i]);
+        }
     }
 }

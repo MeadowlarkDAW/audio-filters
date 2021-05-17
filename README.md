@@ -45,14 +45,15 @@ let gain = 6.0;
 let bandwidth = 1.0;
 let slope = 4.0;
 
-let mut filter = StereoFilterBand::new(sample_rate);
+let mut filter_left = FilterBand::new(sample_rate);
+let mut filter_right = FilterBand::new(sample_rate);
 
-filter.update(BandType::HighShelf, f0, gain, bandwidth, slope, sample_rate);
+filter_left.highshelf(f0, gain, bandwidth, slope, sample_rate);
+filter_right.mimic_band(&filter_left);
 
 for i in 0..1000 {
-    let [l_out, r_out] = filter.process(left[i], right[i]);
-    left[i] = l_out;
-    right[i] = r_out;
+    left[i] = (filter_left.process)(&mut filter_left, left[i]);
+    right[i] = (filter_right.process)(&mut filter_right, right[i]);
 }
 ```
 

@@ -115,10 +115,6 @@ pub fn butterworth_cascade_q<T: FP>(filter_order: u8, pole: u8) -> T {
     T::one() / (two * a.cos())
 }
 
-pub fn test_func<T: FP>(x: T) -> T {
-    x
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
