@@ -12,15 +12,15 @@ pub enum Errors {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum IIR2Type<DBGain> {
+pub enum IIR2Type {
     LowPass,
     HighPass,
     BandPass,
     Notch,
     AllPass,
-    LowShelf(DBGain),
-    HighShelf(DBGain),
-    Bell(DBGain),
+    LowShelf,
+    HighShelf,
+    Bell,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -69,10 +69,11 @@ where
 
     /// Creates a SVF from a set of filter coefficients
     pub fn from_params(
-        filter: IIR2Type<T>,
+        filter: IIR2Type,
         fs: T,
         f0: T,
         q_value: T,
+        db_gain: T,
     ) -> Result<IIR2Coefficients<T>, Errors> {
         let two: T = 2.0.into();
         let ten: T = 10.0.into();
@@ -109,7 +110,7 @@ where
                 a2 = g * a1;
                 a3 = g * a2;
             }
-            IIR2Type::LowShelf(db_gain) => {
+            IIR2Type::LowShelf => {
                 a = (ten).powf(db_gain / forty);
                 g = (T::PI() * f0 / fs).tan() / a.sqrt();
                 k = T::one() / q_value;
@@ -117,7 +118,7 @@ where
                 a2 = g * a1;
                 a3 = g * a2;
             }
-            IIR2Type::HighShelf(db_gain) => {
+            IIR2Type::HighShelf => {
                 a = ten.powf(db_gain / forty);
                 g = (T::PI() * f0 / fs).tan() * a.sqrt();
                 k = T::one() / q_value;
@@ -125,7 +126,7 @@ where
                 a2 = g * a1;
                 a3 = g * a2;
             }
-            IIR2Type::Bell(db_gain) => {
+            IIR2Type::Bell => {
                 a = ten.powf(db_gain / forty);
                 g = (T::PI() * f0 / fs).tan();
                 k = T::one() / (q_value * a);
@@ -161,17 +162,17 @@ where
                 m1 = -two * k;
                 m2 = T::zero();
             }
-            IIR2Type::LowShelf(_) => {
+            IIR2Type::LowShelf => {
                 m0 = T::one();
                 m1 = k * (a - T::one());
                 m2 = a * a - T::one();
             }
-            IIR2Type::HighShelf(_) => {
+            IIR2Type::HighShelf => {
                 m0 = a * a;
                 m1 = k * (T::one() - a) * a;
                 m2 = T::one() - a * a;
             }
-            IIR2Type::Bell(_) => {
+            IIR2Type::Bell => {
                 m0 = T::one();
                 m1 = k * (a * a - T::one());
                 m2 = T::zero();
