@@ -1,8 +1,9 @@
 use core::fmt;
 
-use core::ops::{Add, Mul, Sub};
+use crate::units::FP;
 use num_complex::Complex;
-use num_traits::{Float, FloatConst, NumCast, One, Zero};
+
+use num_traits::NumCast;
 
 use crate::{
     first_order_iir::{IIR1Coefficients, IIR1Type, IIR1},
@@ -46,23 +47,13 @@ impl fmt::Display for BandType {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct IIRCoefficientsSet<T> {
+pub struct IIRCoefficientsSet<T: FP> {
     pub iir1: IIR1Coefficients<T>,
     pub iir2: [IIR2Coefficients<T>; MAX_POLE_COUNT],
     pub iir1_enabled: bool,
 }
 
-impl<T> IIRCoefficientsSet<T>
-where
-    T: Float,
-    T: Zero,
-    T: One,
-    T: FloatConst,
-    f32: Into<T>,
-    T: Add<Complex<T>, Output = Complex<T>>,
-    T: Mul<Complex<T>, Output = Complex<T>>,
-    T: Sub<Complex<T>, Output = Complex<T>>,
-{
+impl<T: FP> IIRCoefficientsSet<T> {
     pub fn new(sample_rate: T) -> IIRCoefficientsSet<T> {
         let iir2_coeffs = IIR2Coefficients::<T>::from_params(
             IIR2Type::Bell,
@@ -97,7 +88,7 @@ where
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct FilterBand<T> {
+pub struct FilterBand<T: FP> {
     iir1: IIR1<T>,
     iir2: [IIR2<T>; MAX_POLE_COUNT],
     pub coeffs: IIRCoefficientsSet<T>,
@@ -113,18 +104,7 @@ pub struct FilterBand<T> {
     sample_rate: T,
 }
 
-impl<T> FilterBand<T>
-where
-    T: Float,
-    T: Zero,
-    T: One,
-    T: FloatConst,
-    f32: Into<T>,
-    u8: Into<T>,
-    T: Add<Complex<T>, Output = Complex<T>>,
-    T: Mul<Complex<T>, Output = Complex<T>>,
-    T: Sub<Complex<T>, Output = Complex<T>>,
-{
+impl<T: FP> FilterBand<T> {
     pub fn new(sample_rate: T) -> FilterBand<T> {
         let coeffs = IIRCoefficientsSet::<T>::new(sample_rate);
         FilterBand {

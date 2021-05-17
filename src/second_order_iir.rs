@@ -1,8 +1,8 @@
-use core::ops::{Add, Mul, Sub};
 use num_complex::Complex;
-use num_traits::{Float, FloatConst, One, Zero};
 
 use crate::units::ZSample;
+
+use crate::units::FP;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Errors {
@@ -11,7 +11,7 @@ pub enum Errors {
     NegativeFrequency,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum IIR2Type {
     LowPass,
     HighPass,
@@ -24,7 +24,7 @@ pub enum IIR2Type {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct IIR2Coefficients<T> {
+pub struct IIR2Coefficients<T: FP> {
     pub a: T,
     pub g: T,
     pub gpow2: T,
@@ -38,18 +38,7 @@ pub struct IIR2Coefficients<T> {
     pub fs: T,
 }
 
-impl<T> IIR2Coefficients<T>
-where
-    T: Float,
-    T: Zero,
-    T: One,
-    T: FloatConst,
-    T: Into<Complex<T>>,
-    f32: Into<T>,
-    T: Add<Complex<T>, Output = Complex<T>>,
-    T: Mul<Complex<T>, Output = Complex<T>>,
-    T: Sub<Complex<T>, Output = Complex<T>>,
-{
+impl<T: FP> IIR2Coefficients<T> {
     pub fn get_bode_sample(self, z: ZSample<T>) -> Complex<T> {
         //Use y.norm() for amplitude and y.arg().to_degrees() for phase. Add to combine phase.
 
@@ -196,18 +185,13 @@ where
 
 /// Internal states and coefficients of the SVF form
 #[derive(Copy, Clone, Debug)]
-pub struct IIR2<T> {
+pub struct IIR2<T: FP> {
     ic1eq: T,
     ic2eq: T,
     pub coeffs: IIR2Coefficients<T>,
 }
 
-impl<T> IIR2<T>
-where
-    T: Float,
-    T: Zero,
-    f32: Into<T>,
-{
+impl<T: FP> IIR2<T> {
     /// Creates a SVF from a set of filter coefficients
     pub fn new(coefficients: IIR2Coefficients<T>) -> Self {
         IIR2 {

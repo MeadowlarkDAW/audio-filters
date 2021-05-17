@@ -1,6 +1,27 @@
+use core::ops::{Add, Mul, Sub};
+
 use num_complex::Complex;
 
 use num_traits::{Float, FloatConst, NumCast, One, Zero};
+
+pub trait FP:
+    Sized
+    + Copy
+    + Float
+    + Zero
+    + One
+    + FloatConst
+    + From<f32>
+    + From<u8>
+    + Into<Complex<Self>>
+    + Add<Complex<Self>, Output = Complex<Self>>
+    + Mul<Complex<Self>, Output = Complex<Self>>
+    + Sub<Complex<Self>, Output = Complex<Self>>
+{
+}
+
+impl FP for f32 {}
+impl FP for f64 {}
 
 /// Used to implement conversions to the Hertz struct
 pub trait Units<T> {
@@ -13,14 +34,7 @@ pub trait Units<T> {
     fn bw_to_q(self, f0: T, fs: T) -> T;
 }
 
-impl<T> Units<T> for T
-where
-    T: Float,
-    T: Zero,
-    T: One,
-    T: FloatConst,
-    T: Into<Complex<T>>,
-{
+impl<T: FP> Units<T> for T {
     fn to_range(self, bottom: T, top: T) -> T {
         self * (top - bottom) + bottom
     }
@@ -28,11 +42,10 @@ where
         (self - bottom) / (top - bottom)
     }
     fn db_to_lin(self) -> T {
-        let ten: T = NumCast::from(10).unwrap();
-        ten.powf(self * NumCast::from(0.05).unwrap())
+        Into::<T>::into(10.0).powf(self * Into::<T>::into(0.05))
     }
     fn lin_to_db(self) -> T {
-        (self.max(T::zero())).log10() * NumCast::from(20.0).unwrap()
+        (self.max(T::zero())).log10() * Into::<T>::into(20.0)
     }
     fn sign(self, b: T) -> T {
         if b < T::zero() {
@@ -54,14 +67,7 @@ pub struct ZSample<T> {
     pub pow2: Complex<T>,
 }
 
-impl<T> ZSample<T>
-where
-    T: Float,
-    T: Zero,
-    T: One,
-    T: FloatConst,
-    T: Into<Complex<T>>,
-{
+impl<T: FP> ZSample<T> {
     pub fn new(f_hz: T, fs: T) -> ZSample<T> {
         let z = -T::TAU() * f_hz / fs;
         let z: Complex<T> =
@@ -74,12 +80,7 @@ where
     }
 }
 
-pub fn butterworth_cascade_q<T>(filter_order: u8, pole: u8) -> T
-where
-    T: Float,
-    T: FloatConst,
-    T: One,
-{
+pub fn butterworth_cascade_q<T: FP>(filter_order: u8, pole: u8) -> T {
     let mut pole = pole;
     let pole_inc: T = T::PI() / (NumCast::from(filter_order).unwrap());
     let even_order = filter_order & 1 == 0;
@@ -98,6 +99,10 @@ where
     let fpole: T = NumCast::from(pole).unwrap();
     let a: T = first_angle + fpole * pole_inc;
     T::one() / (two * a.cos())
+}
+
+pub fn test_func<T: FP>(x: T) -> T {
+    x
 }
 
 #[cfg(test)]

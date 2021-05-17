@@ -1,6 +1,6 @@
-use core::ops::{Add, Mul};
 use num_complex::Complex;
-use num_traits::{Float, FloatConst, One, Zero};
+
+use crate::units::FP;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Errors {
@@ -9,16 +9,7 @@ pub enum Errors {
     NegativeFrequency,
 }
 
-pub fn get_z<T>(f_hz: T, fs: T) -> Complex<T>
-where
-    T: Float,
-    T: Zero,
-    T: One,
-    T: FloatConst,
-    f32: Into<T>,
-    T: Add<Complex<T>, Output = Complex<T>>,
-    T: Mul<Complex<T>, Output = Complex<T>>,
-{
+pub fn get_z<T: FP>(f_hz: T, fs: T) -> Complex<T> {
     let z = -T::TAU() * f_hz / fs;
     z.cos() + z.sin() * Complex::<T>::new(T::zero(), T::one())
 }
@@ -33,7 +24,7 @@ pub enum IIR1Type<DBGain> {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct IIR1Coefficients<T> {
+pub struct IIR1Coefficients<T: FP> {
     pub a: T,
     pub g: T,
     pub a1: T,
@@ -42,16 +33,7 @@ pub struct IIR1Coefficients<T> {
     pub fs: T,
 }
 
-impl<T> IIR1Coefficients<T>
-where
-    T: Float,
-    T: Zero,
-    T: One,
-    T: FloatConst,
-    f32: Into<T>,
-    T: Add<Complex<T>, Output = Complex<T>>,
-    T: Mul<Complex<T>, Output = Complex<T>>,
-{
+impl<T: FP> IIR1Coefficients<T> {
     pub fn get_bode_sample(self, z: Complex<T>) -> Complex<T> {
         //Use y.norm() for amplitude and y.arg().to_degrees() for phase. Add to combine phase.
 
@@ -131,16 +113,12 @@ where
 
 /// Internal states and coefficients of the SVF form
 #[derive(Copy, Clone, Debug)]
-pub struct IIR1<T> {
+pub struct IIR1<T: FP> {
     ic1eq: T,
     pub coeffs: IIR1Coefficients<T>,
 }
 
-impl<T> IIR1<T>
-where
-    T: Float,
-    T: Zero,
-{
+impl<T: FP> IIR1<T> {
     /// Creates a SVF from a set of filter coefficients
     pub fn new(coefficients: IIR1Coefficients<T>) -> Self {
         IIR1 {

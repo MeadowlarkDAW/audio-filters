@@ -1,6 +1,6 @@
-use core::ops::{Add, Mul, Sub};
 use num_complex::Complex;
-use num_traits::{Float, FloatConst, One, Zero};
+
+use crate::units::FP;
 
 use crate::{
     filter_band::{BandType, FilterBand},
@@ -8,23 +8,12 @@ use crate::{
 };
 
 #[derive(Copy, Clone, Debug)]
-pub struct StereoFilterBand<T> {
+pub struct StereoFilterBand<T: FP> {
     left: FilterBand<T>,
     right: FilterBand<T>,
 }
 
-impl<T> StereoFilterBand<T>
-where
-    T: Float,
-    T: Zero,
-    T: One,
-    T: FloatConst,
-    f32: Into<T>,
-    u8: Into<T>,
-    T: Add<Complex<T>, Output = Complex<T>>,
-    T: Mul<Complex<T>, Output = Complex<T>>,
-    T: Sub<Complex<T>, Output = Complex<T>>,
-{
+impl<T: FP> StereoFilterBand<T> {
     pub fn new(sample_rate: T) -> Self {
         StereoFilterBand {
             left: FilterBand::new(sample_rate),
