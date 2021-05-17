@@ -20,8 +20,22 @@ pub trait FP:
 {
 }
 
-impl FP for f32 {}
-impl FP for f64 {}
+impl<T> FP for T
+where
+    T: Sized,
+    T: Copy,
+    T: Float,
+    T: Zero,
+    T: One,
+    T: FloatConst,
+    T: From<f32>,
+    T: From<u8>,
+    T: Into<Complex<Self>>,
+    T: Add<Complex<Self>, Output = Complex<Self>>,
+    T: Mul<Complex<Self>, Output = Complex<Self>>,
+    T: Sub<Complex<Self>, Output = Complex<Self>>,
+{
+}
 
 /// Used to implement conversions to the Hertz struct
 pub trait Units<T> {
