@@ -1,9 +1,6 @@
-use core::f32;
-use core::f64;
-
 use num_complex::Complex;
 
-use libm::*;
+use num_traits::{Float, FloatConst, NumCast, One, Zero};
 
 /// Used to implement conversions to the Hertz struct
 pub trait Units<T> {
@@ -16,54 +13,37 @@ pub trait Units<T> {
     fn bw_to_q(self, f0: T, fs: T) -> T;
 }
 
-impl Units<f64> for f64 {
-    fn to_range(self, bottom: f64, top: f64) -> f64 {
+impl<T> Units<T> for T
+where
+    T: Float,
+    T: Zero,
+    T: One,
+    T: FloatConst,
+    T: Into<Complex<T>>,
+{
+    fn to_range(self, bottom: T, top: T) -> T {
         self * (top - bottom) + bottom
     }
-    fn from_range(self, bottom: f64, top: f64) -> f64 {
+    fn from_range(self, bottom: T, top: T) -> T {
         (self - bottom) / (top - bottom)
     }
-    fn db_to_lin(self) -> f64 {
-        pow(10.0f64, self * 0.05)
+    fn db_to_lin(self) -> T {
+        let ten: T = NumCast::from(10).unwrap();
+        ten.powf(self * NumCast::from(0.05).unwrap())
     }
-    fn lin_to_db(self) -> f64 {
-        log10(self.max(0.0)) * 20.0
+    fn lin_to_db(self) -> T {
+        (self.max(T::zero())).log10() * NumCast::from(20.0).unwrap()
     }
-    fn sign(self, b: f64) -> f64 {
-        if b < 0.0 {
+    fn sign(self, b: T) -> T {
+        if b < T::zero() {
             -self
         } else {
             self
         }
     }
-    fn bw_to_q(self, _f0: f64, _fs: f64) -> f64 {
-        1.0 / (2.0 * sinh(f64::consts::LN_2 / 2.0 * self))
-    }
-}
-
-impl Units<f32> for f32 {
-    //Just a copy of the f64 version with units swapped
-    fn to_range(self, bottom: f32, top: f32) -> f32 {
-        self * (top - bottom) + bottom
-    }
-    fn from_range(self, bottom: f32, top: f32) -> f32 {
-        (self - bottom) / (top - bottom)
-    }
-    fn db_to_lin(self) -> f32 {
-        powf(10.0f32, self * 0.05)
-    }
-    fn lin_to_db(self) -> f32 {
-        log10f(self.max(0.0)) * 20.0
-    }
-    fn sign(self, b: f32) -> f32 {
-        if b < 0.0 {
-            -self
-        } else {
-            self
-        }
-    }
-    fn bw_to_q(self, _f0: f32, _fs: f32) -> f32 {
-        1.0 / (2.0 * sinhf(f32::consts::LN_2 / 2.0 * self))
+    fn bw_to_q(self, _f0: T, _fs: T) -> T {
+        let two = NumCast::from(2.0).unwrap();
+        T::one() / (two * (T::LN_2() / two * self).sinh())
     }
 }
 
@@ -74,10 +54,18 @@ pub struct ZSample<T> {
     pub pow2: Complex<T>,
 }
 
-impl ZSample<f64> {
-    pub fn new(f_hz: f64, fs: f64) -> ZSample<f64> {
-        let z = -f64::consts::TAU * f_hz / fs;
-        let z = cos(z) + sin(z) * Complex::new(0.0, 1.0);
+impl<T> ZSample<T>
+where
+    T: Float,
+    T: Zero,
+    T: One,
+    T: FloatConst,
+    T: Into<Complex<T>>,
+{
+    pub fn new(f_hz: T, fs: T) -> ZSample<T> {
+        let z = -T::TAU() * f_hz / fs;
+        let z: Complex<T> =
+            z.cos().into() + z.sin().into() * Complex::<T>::new(T::zero(), T::one());
         ZSample {
             z,
             pow1: z,
@@ -86,34 +74,30 @@ impl ZSample<f64> {
     }
 }
 
-impl ZSample<f32> {
-    pub fn new(f_hz: f32, fs: f32) -> ZSample<f32> {
-        let z = -f32::consts::TAU * f_hz / fs;
-        let z = cosf(z) + sinf(z) * Complex::new(0.0, 1.0);
-        ZSample {
-            z,
-            pow1: z,
-            pow2: z * z,
-        }
-    }
-}
-
-pub fn butterworth_cascade_q(filter_order: u32, pole: u32) -> f64 {
+pub fn butterworth_cascade_q<T>(filter_order: u8, pole: u8) -> T
+where
+    T: Float,
+    T: FloatConst,
+    T: One,
+{
     let mut pole = pole;
-    let pole_inc = f64::consts::PI / (filter_order as f64);
+    let pole_inc: T = T::PI() / (NumCast::from(filter_order).unwrap());
     let even_order = filter_order & 1 == 0;
+    let point_five = NumCast::from(0.5).unwrap();
+    let two: T = NumCast::from(2.0).unwrap();
 
     let first_angle = if even_order {
-        pole_inc * 0.5
+        pole_inc * point_five
     } else {
         if pole == 0 {
-            return 0.5; //Also needs to be 1 pole (not biquad)
+            return point_five; //Also needs to be 1 pole (not biquad)
         }
         pole -= 1;
         pole_inc
     };
-
-    1.0 / (2.0 * cos(first_angle + pole as f64 * pole_inc))
+    let fpole: T = NumCast::from(pole).unwrap();
+    let a: T = first_angle + fpole * pole_inc;
+    T::one() / (two * a.cos())
 }
 
 #[cfg(test)]
@@ -137,6 +121,6 @@ mod tests {
         assert_eq!(0.5176380902050415, butterworth_cascade_q(6, 0));
         assert_eq!(0.7071067811865475, butterworth_cascade_q(6, 1));
         assert_eq!(1.931851652578135, butterworth_cascade_q(6, 2));
-        dbg!(butterworth_cascade_q(5, 2));
+        dbg!(butterworth_cascade_q::<f64>(5, 2));
     }
 }

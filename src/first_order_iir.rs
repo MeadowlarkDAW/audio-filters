@@ -1,7 +1,6 @@
-use core::f64::consts::{PI, TAU};
-
-use libm::*;
+use core::ops::{Add, Mul};
 use num_complex::Complex;
+use num_traits::{Float, FloatConst, One, Zero};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Errors {
@@ -10,9 +9,18 @@ pub enum Errors {
     NegativeFrequency,
 }
 
-pub fn get_z(f_hz: f64, fs: f64) -> Complex<f64> {
-    let z = -TAU * f_hz / fs;
-    cos(z) + sin(z) * Complex::new(0.0, 1.0)
+pub fn get_z<T>(f_hz: T, fs: T) -> Complex<T>
+where
+    T: Float,
+    T: Zero,
+    T: One,
+    T: FloatConst,
+    f32: Into<T>,
+    T: Add<Complex<T>, Output = Complex<T>>,
+    T: Mul<Complex<T>, Output = Complex<T>>,
+{
+    let z = -T::TAU() * f_hz / fs;
+    z.cos() + z.sin() * Complex::<T>::new(T::zero(), T::one())
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -34,24 +42,33 @@ pub struct IIR1Coefficients<T> {
     pub fs: T,
 }
 
-impl IIR1Coefficients<f64> {
-    pub fn get_bode_sample(self, z: Complex<f64>) -> Complex<f64> {
+impl<T> IIR1Coefficients<T>
+where
+    T: Float,
+    T: Zero,
+    T: One,
+    T: FloatConst,
+    f32: Into<T>,
+    T: Add<Complex<T>, Output = Complex<T>>,
+    T: Mul<Complex<T>, Output = Complex<T>>,
+{
+    pub fn get_bode_sample(self, z: Complex<T>) -> Complex<T> {
         //Use y.norm() for amplitude and y.arg().to_degrees() for phase. Add to combine phase.
 
-        let denominator = self.g + z * (self.g - 1.0) + 1.0;
+        let denominator = self.g + z * (self.g - T::one()) + T::one();
 
-        let y = self.m0 + (self.m1 * self.g * (z + 1.0)) / denominator;
+        let y = self.m0 + (self.m1 * self.g * (z + T::one())) / denominator;
 
         y
     }
 
     /// Creates a SVF from a set of filter coefficients
-    pub fn from_params(
-        filter: IIR1Type<f64>,
-        fs: f64,
-        f0: f64,
-    ) -> Result<IIR1Coefficients<f64>, Errors> {
-        if 2.0 * f0 > fs {
+    pub fn from_params(filter: IIR1Type<T>, fs: T, f0: T) -> Result<IIR1Coefficients<T>, Errors> {
+        let two: T = 2.0.into();
+        let ten: T = 10.0.into();
+        let twenty: T = 20.0.into();
+
+        if two * f0 > fs {
             return Err(Errors::OutsideNyquist);
         }
 
@@ -63,42 +80,42 @@ impl IIR1Coefficients<f64> {
 
         match filter {
             IIR1Type::LowPass | IIR1Type::HighPass | IIR1Type::AllPass => {
-                a = 1.0;
-                g = (PI * f0 / fs).tan();
-                a1 = g / (1.0 + g);
+                a = T::one();
+                g = (T::PI() * f0 / fs).tan();
+                a1 = g / (T::one() + g);
             }
             IIR1Type::LowShelf(db_gain) => {
-                a = 10.0f64.powf(db_gain / 20.0);
-                g = (PI * f0 / fs).tan() / (a).sqrt();
-                a1 = g / (1.0 + g);
+                a = ten.powf(db_gain / twenty);
+                g = (T::PI() * f0 / fs).tan() / (a).sqrt();
+                a1 = g / (T::one() + g);
             }
             IIR1Type::HighShelf(db_gain) => {
-                a = 10.0f64.powf(db_gain / 20.0);
-                g = (PI * f0 / fs).tan() * (a).sqrt();
-                a1 = g / (1.0 + g);
+                a = ten.powf(db_gain / twenty);
+                g = (T::PI() * f0 / fs).tan() * (a).sqrt();
+                a1 = g / (T::one() + g);
             }
         };
 
         match filter {
             IIR1Type::LowPass => {
-                m0 = 0.0;
-                m1 = 1.0;
+                m0 = T::zero();
+                m1 = T::one();
             }
             IIR1Type::HighPass => {
-                m0 = 1.0;
-                m1 = -1.0;
+                m0 = T::one();
+                m1 = -T::one();
             }
             IIR1Type::AllPass => {
-                m0 = 1.0;
-                m1 = -2.0;
+                m0 = T::one();
+                m1 = -two;
             }
             IIR1Type::LowShelf(_) => {
-                m0 = 1.0;
-                m1 = a - 1.0;
+                m0 = T::one();
+                m1 = a - T::one();
             }
             IIR1Type::HighShelf(_) => {
                 m0 = a;
-                m1 = 1.0 - a;
+                m1 = T::one() - a;
             }
         };
         Ok(IIR1Coefficients {
@@ -119,16 +136,20 @@ pub struct IIR1<T> {
     pub coeffs: IIR1Coefficients<T>,
 }
 
-impl IIR1<f64> {
+impl<T> IIR1<T>
+where
+    T: Float,
+    T: Zero,
+{
     /// Creates a SVF from a set of filter coefficients
-    pub fn new(coefficients: IIR1Coefficients<f64>) -> Self {
+    pub fn new(coefficients: IIR1Coefficients<T>) -> Self {
         IIR1 {
-            ic1eq: 0.0,
+            ic1eq: T::zero(),
             coeffs: coefficients,
         }
     }
 
-    pub fn run(&mut self, input: f64) -> f64 {
+    pub fn run(&mut self, input: T) -> T {
         let v1 = self.coeffs.a1 * (input - self.ic1eq);
         let v2 = v1 + self.ic1eq;
         self.ic1eq = v2 + v1;
@@ -136,7 +157,7 @@ impl IIR1<f64> {
         self.coeffs.m0 * input + self.coeffs.m1 * v2
     }
 
-    pub fn update_coefficients(&mut self, new_coefficients: IIR1Coefficients<f64>) {
+    pub fn update_coefficients(&mut self, new_coefficients: IIR1Coefficients<T>) {
         self.coeffs = new_coefficients;
     }
 }
