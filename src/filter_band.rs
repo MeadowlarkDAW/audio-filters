@@ -6,8 +6,8 @@ use num_complex::Complex;
 use num_traits::NumCast;
 
 use crate::{
-    first_order_iir::{IIR1Coefficients, IIR1Type, IIR1},
-    second_order_iir::{IIR2Coefficients, IIR2Type, IIR2},
+    first_order_iir::{IIR1Coefficients, IIR1},
+    second_order_iir::{IIR2Coefficients, IIR2},
     units::{butterworth_cascade_q, Units, ZSample},
     MAX_POLE_COUNT,
 };
@@ -55,17 +55,8 @@ pub struct IIRCoefficientsSet<T: FP> {
 
 impl<T: FP> IIRCoefficientsSet<T> {
     pub fn new(sample_rate: T) -> IIRCoefficientsSet<T> {
-        let iir2_coeffs = IIR2Coefficients::<T>::from_params(
-            IIR2Type::Bell,
-            sample_rate,
-            1000.0.into(),
-            T::one(),
-            T::zero(),
-        )
-        .unwrap();
-        let iir1_coeffs =
-            IIR1Coefficients::<T>::from_params(IIR1Type::LowPass, sample_rate, 1000.0.into())
-                .unwrap();
+        let iir2_coeffs = IIR2Coefficients::bell(sample_rate, T::one(), 1000.0.into(), T::zero());
+        let iir1_coeffs = IIR1Coefficients::<T>::lowpass(1000.0.into(), sample_rate);
         IIRCoefficientsSet {
             iir1_enabled: false,
             iir1: iir1_coeffs,
@@ -176,14 +167,14 @@ impl<T: FP> FilterBand<T> {
         in_gain: T,
         in_bw_value: T,
         slope: T,
-        sample_rate: T,
+        fs: T,
     ) {
         if kind == self.kind
             && in_freq == self.freq
             && in_gain == self.gain
             && in_bw_value == self.bw_value
             && slope == self.slope
-            && sample_rate == self.sample_rate
+            && fs == self.sample_rate
         {
             return;
         }
@@ -193,9 +184,9 @@ impl<T: FP> FilterBand<T> {
         self.gain = in_gain;
         self.bw_value = in_bw_value;
         self.slope = slope;
-        self.sample_rate = sample_rate;
+        self.sample_rate = fs;
 
-        let freq = self.freq;
+        let f0 = self.freq;
         let gain = self.gain;
         let bw_value = self.bw_value;
 
@@ -219,26 +210,20 @@ impl<T: FP> FilterBand<T> {
         self.start_pole = if self.iir1_enabled { 1 } else { 0 } as usize;
         self.iir2_cascade_count = ((self.u_slope as usize + self.start_pole) / 2) as usize;
 
-        let q_value = bw_value.bw_to_q(freq, sample_rate);
+        let q_value = bw_value.bw_to_q(f0, fs);
         let q_offset = q_value * T::FRAC_1_SQRT_2(); //butterworth Q
 
         let mut partial_gain = gain / self.u_slope.into();
 
         if self.iir1_enabled {
-            self.coeffs.iir1 = IIR1Coefficients::<T>::from_params(
-                match kind {
-                    BandType::LowPass => IIR1Type::LowPass,
-                    BandType::HighPass => IIR1Type::HighPass,
-                    BandType::LowShelf => IIR1Type::LowShelf(partial_gain),
-                    BandType::HighShelf => IIR1Type::HighShelf(partial_gain),
-                    BandType::AllPass => IIR1Type::AllPass,
-                    BandType::BandPass => IIR1Type::HighPass,
-                    _ => IIR1Type::LowPass,
-                },
-                sample_rate,
-                freq,
-            )
-            .unwrap();
+            self.coeffs.iir1 = match kind {
+                BandType::LowPass => IIR1Coefficients::lowpass(f0, fs),
+                BandType::HighPass => IIR1Coefficients::highpass(f0, fs),
+                BandType::LowShelf => IIR1Coefficients::lowshelf(f0, partial_gain, fs),
+                BandType::HighShelf => IIR1Coefficients::highshelf(f0, partial_gain, fs),
+                BandType::AllPass => IIR1Coefficients::allpass(f0, fs),
+                _ => IIR1Coefficients::lowpass(f0, fs),
+            };
         }
 
         if self.u_slope <= 1 {
@@ -251,101 +236,47 @@ impl<T: FP> FilterBand<T> {
 
         match self.kind {
             BandType::Bell => {
-                self.coeffs.iir2[0] = IIR2Coefficients::<T>::from_params(
-                    IIR2Type::Bell,
-                    sample_rate,
-                    freq,
-                    q_value,
-                    gain,
-                )
-                .unwrap();
+                self.coeffs.iir2[0] = IIR2Coefficients::bell(f0, q_value, gain, fs);
             }
             BandType::LowPass => {
                 for i in self.start_pole..self.iir2_cascade_count {
                     let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::<T>::from_params(
-                        IIR2Type::LowPass,
-                        sample_rate,
-                        freq,
-                        q_value * q_offset,
-                        T::zero(),
-                    )
-                    .unwrap();
+                    self.coeffs.iir2[i] = IIR2Coefficients::lowpass(f0, q_value * q_offset, fs);
                 }
             }
             BandType::HighPass => {
                 for i in self.start_pole..self.iir2_cascade_count {
                     let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::<T>::from_params(
-                        IIR2Type::HighPass,
-                        sample_rate,
-                        freq,
-                        q_value * q_offset,
-                        T::zero(),
-                    )
-                    .unwrap();
+                    self.coeffs.iir2[i] = IIR2Coefficients::highpass(f0, q_value * q_offset, fs);
                 }
             }
             BandType::LowShelf => {
                 for i in self.start_pole..self.iir2_cascade_count {
                     let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::<T>::from_params(
-                        IIR2Type::LowShelf,
-                        sample_rate,
-                        freq,
-                        q_value * q_offset,
-                        partial_gain,
-                    )
-                    .unwrap();
+                    self.coeffs.iir2[i] =
+                        IIR2Coefficients::lowshelf(f0, q_value * q_offset, partial_gain, fs);
                 }
             }
             BandType::HighShelf => {
                 for i in self.start_pole..self.iir2_cascade_count {
                     let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::<T>::from_params(
-                        IIR2Type::HighShelf,
-                        sample_rate,
-                        freq,
-                        q_value * q_offset,
-                        partial_gain,
-                    )
-                    .unwrap();
+                    self.coeffs.iir2[i] =
+                        IIR2Coefficients::highshelf(f0, q_value * q_offset, partial_gain, fs);
                 }
             }
             BandType::Notch => {
-                self.coeffs.iir2[0] = IIR2Coefficients::<T>::from_params(
-                    IIR2Type::Notch,
-                    sample_rate,
-                    freq,
-                    q_value,
-                    T::zero(),
-                )
-                .unwrap();
+                self.coeffs.iir2[0] = IIR2Coefficients::notch(f0, q_value * q_offset, fs);
             }
             BandType::BandPass => {
                 for i in self.start_pole..self.iir2_cascade_count {
                     let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::<T>::from_params(
-                        IIR2Type::BandPass,
-                        sample_rate,
-                        freq,
-                        q_value * q_offset,
-                        T::zero(),
-                    )
-                    .unwrap();
+                    self.coeffs.iir2[i] = IIR2Coefficients::bandpass(f0, q_value * q_offset, fs);
                 }
             }
             BandType::AllPass => {
                 for i in self.start_pole..self.iir2_cascade_count {
                     let q_value: T = butterworth_cascade_q(self.u_slope, i as u8);
-                    self.coeffs.iir2[i] = IIR2Coefficients::<T>::from_params(
-                        IIR2Type::AllPass,
-                        sample_rate,
-                        freq,
-                        q_value * q_offset,
-                        T::zero(),
-                    )
-                    .unwrap();
+                    self.coeffs.iir2[i] = IIR2Coefficients::allpass(f0, q_value * q_offset, fs);
                 }
             }
         }

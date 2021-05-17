@@ -2,25 +2,9 @@ use num_complex::Complex;
 
 use crate::units::FP;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Errors {
-    OutsideNyquist,
-    NegativeQ,
-    NegativeFrequency,
-}
-
 pub fn get_z<T: FP>(f_hz: T, fs: T) -> Complex<T> {
     let z = -T::TAU() * f_hz / fs;
     z.cos() + z.sin() * Complex::<T>::new(T::zero(), T::one())
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum IIR1Type<DBGain> {
-    LowPass,
-    HighPass,
-    AllPass,
-    LowShelf(DBGain),
-    HighShelf(DBGain),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -44,70 +28,89 @@ impl<T: FP> IIR1Coefficients<T> {
         y
     }
 
-    /// Creates a SVF from a set of filter coefficients
-    pub fn from_params(filter: IIR1Type<T>, fs: T, f0: T) -> Result<IIR1Coefficients<T>, Errors> {
-        let two: T = 2.0.into();
-        let ten: T = 10.0.into();
-        let twenty: T = 20.0.into();
-
-        if two * f0 > fs {
-            return Err(Errors::OutsideNyquist);
-        }
-
-        let a;
-        let g;
-        let a1;
-        let m0;
-        let m1;
-
-        match filter {
-            IIR1Type::LowPass | IIR1Type::HighPass | IIR1Type::AllPass => {
-                a = T::one();
-                g = (T::PI() * f0 / fs).tan();
-                a1 = g / (T::one() + g);
-            }
-            IIR1Type::LowShelf(db_gain) => {
-                a = ten.powf(db_gain / twenty);
-                g = (T::PI() * f0 / fs).tan() / (a).sqrt();
-                a1 = g / (T::one() + g);
-            }
-            IIR1Type::HighShelf(db_gain) => {
-                a = ten.powf(db_gain / twenty);
-                g = (T::PI() * f0 / fs).tan() * (a).sqrt();
-                a1 = g / (T::one() + g);
-            }
-        };
-
-        match filter {
-            IIR1Type::LowPass => {
-                m0 = T::zero();
-                m1 = T::one();
-            }
-            IIR1Type::HighPass => {
-                m0 = T::one();
-                m1 = -T::one();
-            }
-            IIR1Type::AllPass => {
-                m0 = T::one();
-                m1 = -two;
-            }
-            IIR1Type::LowShelf(_) => {
-                m0 = T::one();
-                m1 = a - T::one();
-            }
-            IIR1Type::HighShelf(_) => {
-                m0 = a;
-                m1 = T::one() - a;
-            }
-        };
-        Ok(IIR1Coefficients {
+    pub fn lowpass(f0: T, fs: T) -> IIR1Coefficients<T> {
+        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let a = T::one();
+        let g = (T::PI() * f0 / fs).tan();
+        let a1 = g / (T::one() + g);
+        let m0 = T::zero();
+        let m1 = T::one();
+        IIR1Coefficients {
             a,
             g,
             a1,
             m0,
             m1,
             fs,
-        })
+        }
+    }
+
+    pub fn highpass(f0: T, fs: T) -> IIR1Coefficients<T> {
+        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let a = T::one();
+        let g = (T::PI() * f0 / fs).tan();
+        let a1 = g / (T::one() + g);
+        let m0 = T::one();
+        let m1 = -T::one();
+        IIR1Coefficients {
+            a,
+            g,
+            a1,
+            m0,
+            m1,
+            fs,
+        }
+    }
+
+    pub fn allpass(f0: T, fs: T) -> IIR1Coefficients<T> {
+        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let a = T::one();
+        let g = (T::PI() * f0 / fs).tan();
+        let a1 = g / (T::one() + g);
+        let m0 = T::one();
+        let m1 = -Into::<T>::into(2.0);
+        IIR1Coefficients {
+            a,
+            g,
+            a1,
+            m0,
+            m1,
+            fs,
+        }
+    }
+
+    pub fn lowshelf(f0: T, db_gain: T, fs: T) -> IIR1Coefficients<T> {
+        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let a = Into::<T>::into(10.0).powf(db_gain / Into::<T>::into(20.0));
+        let g = (T::PI() * f0 / fs).tan() / (a).sqrt();
+        let a1 = g / (T::one() + g);
+        let m0 = T::one();
+        let m1 = a - T::one();
+        IIR1Coefficients {
+            a,
+            g,
+            a1,
+            m0,
+            m1,
+            fs,
+        }
+    }
+
+    pub fn highshelf(f0: T, db_gain: T, fs: T) -> IIR1Coefficients<T> {
+        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let a = Into::<T>::into(10.0).powf(db_gain / Into::<T>::into(20.0));
+        let g = (T::PI() * f0 / fs).tan() * (a).sqrt();
+        let a1 = g / (T::one() + g);
+        let m0 = a;
+        let m1 = T::one() - a;
+        IIR1Coefficients {
+            a,
+            g,
+            a1,
+            m0,
+            m1,
+            fs,
+        }
     }
 }
 
