@@ -124,14 +124,14 @@ impl<T: FP> FilterBand<T> {
         let mut x = x;
 
         if self.iir1_enabled {
-            x = self.iir1.run(x);
+            x = self.iir1.process(x);
         }
         if self.u_slope > 1 {
             if self.kind == BandType::Bell || self.kind == BandType::Notch {
-                x = self.iir2[0].run(x);
+                x = self.iir2[0].process(x);
             } else {
                 for i in self.start_pole..self.iir2_cascade_count {
-                    x = self.iir2[i].run(x);
+                    x = self.iir2[i].process(x);
                 }
             }
         }

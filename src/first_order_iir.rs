@@ -130,7 +130,7 @@ impl<T: FP> IIR1<T> {
         }
     }
 
-    pub fn run(&mut self, input: T) -> T {
+    pub fn process(&mut self, input: T) -> T {
         let v1 = self.coeffs.a1 * (input - self.ic1eq);
         let v2 = v1 + self.ic1eq;
         self.ic1eq = v2 + v1;
