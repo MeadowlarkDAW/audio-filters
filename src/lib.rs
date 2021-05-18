@@ -1,5 +1,7 @@
 #![cfg_attr(not(test), no_std)]
+#![feature(test)]
 
+pub mod benchmark;
 pub mod filter_band;
 pub mod first_order_iir;
 pub mod second_order_iir;
