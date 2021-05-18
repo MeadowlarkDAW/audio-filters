@@ -13,6 +13,7 @@ pub trait FP:
     + FloatConst
     + From<f32>
     + From<u8>
+    + Into<f64>
     + Into<Complex<Self>>
     + Add<Complex<Self>, Output = Complex<Self>>
     + Mul<Complex<Self>, Output = Complex<Self>>
@@ -30,6 +31,7 @@ where
     T: FloatConst,
     T: From<f32>,
     T: From<u8>,
+    T: Into<f64>,
     T: Into<Complex<Self>>,
     T: Add<Complex<Self>, Output = Complex<Self>>,
     T: Mul<Complex<Self>, Output = Complex<Self>>,
@@ -84,8 +86,8 @@ pub struct ZSample<T> {
 impl<T: FP> ZSample<T> {
     pub fn new(f_hz: T, fs: T) -> ZSample<T> {
         let z = -T::TAU() * f_hz / fs;
-        let z: Complex<T> =
-            z.cos().into() + z.sin().into() * Complex::<T>::new(T::zero(), T::one());
+        let z: Complex<T> = Into::<T>::into(z.cos())
+            + Into::<T>::into(z.sin()) * Complex::<T>::new(T::zero(), T::one());
         ZSample {
             z,
             pow1: z,
