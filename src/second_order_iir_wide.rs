@@ -1,4 +1,8 @@
-use crate::{second_order_iir::IIR2Coefficients, units::FP, MAX_POLE_COUNT};
+use crate::{
+    second_order_iir::IIR2Coefficients,
+    units::{F32x8, F64x4, FP},
+    MAX_POLE_COUNT,
+};
 use num_traits::NumCast;
 use wide::f32x8;
 use wide::f64x4;
@@ -85,12 +89,11 @@ impl WideF64IIR2 {
     }
 
     pub fn process(&mut self, input: f64x4) -> f64x4 {
-        let two: f64x4 = 2.0.into();
         let v3 = input - self.ic2eq;
         let v1 = self.coeffs.a1 * self.ic1eq + self.coeffs.a2 * v3;
         let v2 = self.ic2eq + self.coeffs.a2 * self.ic1eq + self.coeffs.a3 * v3;
-        self.ic1eq = two * v1 - self.ic1eq;
-        self.ic2eq = two * v2 - self.ic2eq;
+        self.ic1eq = F64x4::TWO * v1 - self.ic1eq;
+        self.ic2eq = F64x4::TWO * v2 - self.ic2eq;
 
         self.coeffs.m0 * input + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
     }
@@ -183,12 +186,11 @@ impl WideF32IIR2 {
     }
 
     pub fn process(&mut self, input: f32x8) -> f32x8 {
-        let two: f32x8 = 2.0.into();
         let v3 = input - self.ic2eq;
         let v1 = self.coeffs.a1 * self.ic1eq + self.coeffs.a2 * v3;
         let v2 = self.ic2eq + self.coeffs.a2 * self.ic1eq + self.coeffs.a3 * v3;
-        self.ic1eq = two * v1 - self.ic1eq;
-        self.ic2eq = two * v2 - self.ic2eq;
+        self.ic1eq = F32x8::TWO * v1 - self.ic1eq;
+        self.ic2eq = F32x8::TWO * v2 - self.ic2eq;
 
         self.coeffs.m0 * input + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
     }

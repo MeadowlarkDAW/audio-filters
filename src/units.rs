@@ -4,6 +4,9 @@ use num_complex::Complex;
 
 use num_traits::{Float, FloatConst, NumCast, One, Zero};
 
+use wide::f32x8;
+use wide::f64x4;
+
 pub trait FP:
     Sized
     + Copy
@@ -115,6 +118,54 @@ pub fn butterworth_cascade_q<T: FP>(filter_order: u8, pole: u8) -> T {
     let fpole: T = NumCast::from(pole).unwrap();
     let a: T = first_angle + fpole * pole_inc;
     T::one() / (two * a.cos())
+}
+
+#[allow(non_camel_case_types)]
+#[repr(C, align(16))]
+union ConstUnionHack128bit {
+    f64a4: [f64; 4],
+    f32a8: [f32; 8],
+    f32a4: [f32; 4],
+    i32a4: [i32; 4],
+    i64a4: [i64; 4],
+    f64a2: [f64; 2],
+    f32x8: f32x8,
+    f64x4: f64x4,
+    u128: u128,
+}
+
+macro_rules! const_f64_as_f64x4 {
+    ($i:ident, $f:expr) => {
+        pub const $i: f64x4 = unsafe {
+            ConstUnionHack128bit {
+                f64a4: [$f, $f, $f, $f],
+            }
+            .f64x4
+        };
+    };
+}
+
+macro_rules! const_f64_as_f32x8 {
+    ($i:ident, $f:expr) => {
+        pub const $i: f32x8 = unsafe {
+            ConstUnionHack128bit {
+                f64a4: [$f, $f, $f, $f],
+            }
+            .f32x8
+        };
+    };
+}
+
+#[allow(non_snake_case)]
+pub(crate) mod F32x8 {
+    use super::*;
+    const_f64_as_f32x8!(TWO, 2.0);
+}
+
+#[allow(non_snake_case)]
+pub(crate) mod F64x4 {
+    use super::*;
+    const_f64_as_f64x4!(TWO, 2.0);
 }
 
 #[cfg(test)]
