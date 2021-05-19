@@ -1,4 +1,6 @@
 use crate::{second_order_iir::IIR2Coefficients, units::FP, MAX_POLE_COUNT};
+use num_traits::NumCast;
+use wide::f32x8;
 use wide::f64x4;
 
 #[derive(Copy, Clone, Debug)]
@@ -94,6 +96,104 @@ impl WideF64IIR2 {
     }
 
     pub fn update_coefficients(&mut self, new_coefficients: WideF64IIR2Coefficients) {
+        self.coeffs = new_coefficients;
+    }
+}
+
+//Copy of WideF64 (x4) just replacing with F32 (x8) (and NumCast)
+#[derive(Copy, Clone, Debug)]
+pub struct WideF32IIR2Coefficients {
+    pub a: f32x8,
+    pub g: f32x8,
+    pub gpow2: f32x8,
+    pub k: f32x8,
+    pub a1: f32x8,
+    pub a2: f32x8,
+    pub a3: f32x8,
+    pub m0: f32x8,
+    pub m1: f32x8,
+    pub m2: f32x8,
+    pub fs: f32x8,
+}
+
+impl WideF32IIR2Coefficients {
+    pub fn from<T: FP>(coeffs: IIR2Coefficients<T>) -> WideF32IIR2Coefficients {
+        let a = f32x8::splat(NumCast::from(coeffs.a).unwrap());
+        let g = f32x8::splat(NumCast::from(coeffs.g).unwrap());
+        let k = f32x8::splat(NumCast::from(coeffs.k).unwrap());
+        let a1 = f32x8::splat(NumCast::from(coeffs.a1).unwrap());
+        let a2 = f32x8::splat(NumCast::from(coeffs.a2).unwrap());
+        let a3 = f32x8::splat(NumCast::from(coeffs.a3).unwrap());
+        let m0 = f32x8::splat(NumCast::from(coeffs.m0).unwrap());
+        let m1 = f32x8::splat(NumCast::from(coeffs.m1).unwrap());
+        let m2 = f32x8::splat(NumCast::from(coeffs.m2).unwrap());
+        let fs = f32x8::splat(NumCast::from(coeffs.fs).unwrap());
+        WideF32IIR2Coefficients {
+            a,
+            g,
+            gpow2: g * g,
+            k,
+            a1,
+            a2,
+            a3,
+            m0,
+            m1,
+            m2,
+            fs,
+        }
+    }
+
+    pub const fn empty() -> WideF32IIR2Coefficients {
+        WideF32IIR2Coefficients {
+            a: f32x8::ZERO,
+            g: f32x8::ZERO,
+            gpow2: f32x8::ZERO,
+            k: f32x8::ZERO,
+            a1: f32x8::ZERO,
+            a2: f32x8::ZERO,
+            a3: f32x8::ZERO,
+            m0: f32x8::ZERO,
+            m1: f32x8::ZERO,
+            m2: f32x8::ZERO,
+            fs: f32x8::ZERO,
+        }
+    }
+
+    pub const fn empty_cascade() -> [WideF32IIR2Coefficients; MAX_POLE_COUNT] {
+        [WideF32IIR2Coefficients::empty(); MAX_POLE_COUNT]
+    }
+}
+
+/// Internal states and coefficients of the SVF form
+#[derive(Copy, Clone, Debug)]
+pub struct WideF32IIR2 {
+    ic1eq: f32x8,
+    ic2eq: f32x8,
+    pub coeffs: WideF32IIR2Coefficients,
+}
+
+impl WideF32IIR2 {
+    /// Creates a SVF from a set of filter coefficients
+    pub fn new(coefficients: WideF32IIR2Coefficients) -> Self {
+        WideF32IIR2 {
+            ic1eq: f32x8::ZERO,
+            ic2eq: f32x8::ZERO,
+            coeffs: coefficients,
+        }
+    }
+
+    pub fn process(&mut self, input: f32x8) -> f32x8 {
+        let two: f32x8 = 2.0.into();
+        let v3 = input - self.ic2eq;
+        let v1 = self.coeffs.a1 * self.ic1eq + self.coeffs.a2 * v3;
+        let v2 = self.ic2eq + self.coeffs.a2 * self.ic1eq + self.coeffs.a3 * v3;
+        self.ic1eq = two * v1 - self.ic1eq;
+        self.ic2eq = two * v2 - self.ic2eq;
+
+        self.coeffs.m0 * input + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
+    }
+
+    pub fn update_coefficients(&mut self, new_coefficients: WideF32IIR2Coefficients) {
         self.coeffs = new_coefficients;
     }
 }

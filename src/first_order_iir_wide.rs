@@ -1,5 +1,8 @@
 use crate::{first_order_iir::IIR1Coefficients, units::FP};
+use num_traits::NumCast;
+use wide::f32x8;
 use wide::f64x4;
+
 #[derive(Copy, Clone, Debug)]
 pub struct WideF64IIR1Coefficients {
     pub a: f64x4,
@@ -52,6 +55,63 @@ impl WideF64IIR1 {
     }
 
     pub fn update_coefficients(&mut self, new_coefficients: WideF64IIR1Coefficients) {
+        self.coeffs = new_coefficients;
+    }
+}
+
+//Copy of WideF64 (x4) just replacing with F32 (x8) (and NumCast)
+#[derive(Copy, Clone, Debug)]
+pub struct WideF32IIR1Coefficients {
+    pub a: f32x8,
+    pub g: f32x8,
+    pub a1: f32x8,
+    pub m0: f32x8,
+    pub m1: f32x8,
+    pub fs: f32x8,
+}
+
+impl WideF32IIR1Coefficients {
+    pub fn from<T: FP>(coeffs: IIR1Coefficients<T>) -> WideF32IIR1Coefficients {
+        let a = f32x8::splat(NumCast::from(coeffs.a).unwrap());
+        let g = f32x8::splat(NumCast::from(coeffs.g).unwrap());
+        let a1 = f32x8::splat(NumCast::from(coeffs.a1).unwrap());
+        let m0 = f32x8::splat(NumCast::from(coeffs.m0).unwrap());
+        let m1 = f32x8::splat(NumCast::from(coeffs.m1).unwrap());
+        let fs = f32x8::splat(NumCast::from(coeffs.fs).unwrap());
+        WideF32IIR1Coefficients {
+            a,
+            g,
+            a1,
+            m0,
+            m1,
+            fs,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct WideF32IIR1 {
+    ic1eq: f32x8,
+    pub coeffs: WideF32IIR1Coefficients,
+}
+
+impl WideF32IIR1 {
+    pub fn new(coefficients: WideF32IIR1Coefficients) -> Self {
+        WideF32IIR1 {
+            ic1eq: f32x8::ZERO,
+            coeffs: coefficients,
+        }
+    }
+
+    pub fn process(&mut self, input: f32x8) -> f32x8 {
+        let v1 = self.coeffs.a1 * (input - self.ic1eq);
+        let v2 = v1 + self.ic1eq;
+        self.ic1eq = v2 + v1;
+
+        self.coeffs.m0 * input + self.coeffs.m1 * v2
+    }
+
+    pub fn update_coefficients(&mut self, new_coefficients: WideF32IIR1Coefficients) {
         self.coeffs = new_coefficients;
     }
 }
