@@ -2,6 +2,8 @@ use num_complex::Complex;
 
 use crate::units::FP;
 
+use wide::f64x4;
+
 pub fn get_z<T: FP>(f_hz: T, fs: T) -> Complex<T> {
     let z = -T::TAU() * f_hz / fs;
     z.cos() + z.sin() * Complex::<T>::new(T::zero(), T::one())
@@ -154,10 +156,8 @@ impl<T: FP> IIR1<T> {
     }
 }
 
-use wide::f64x4;
-
 #[derive(Copy, Clone, Debug)]
-pub struct WideIIR1Coefficients {
+pub struct WideF64IIR1Coefficients {
     pub a: f64x4,
     pub g: f64x4,
     pub a1: f64x4,
@@ -166,15 +166,15 @@ pub struct WideIIR1Coefficients {
     pub fs: f64x4,
 }
 
-impl WideIIR1Coefficients {
-    pub fn from<T: FP>(coeffs: IIR1Coefficients<T>) -> WideIIR1Coefficients {
+impl WideF64IIR1Coefficients {
+    pub fn from<T: FP>(coeffs: IIR1Coefficients<T>) -> WideF64IIR1Coefficients {
         let a = f64x4::splat(Into::<f64>::into(coeffs.a));
         let g = f64x4::splat(Into::<f64>::into(coeffs.g));
         let a1 = f64x4::splat(Into::<f64>::into(coeffs.a1));
         let m0 = f64x4::splat(Into::<f64>::into(coeffs.m0));
         let m1 = f64x4::splat(Into::<f64>::into(coeffs.m1));
         let fs = f64x4::splat(Into::<f64>::into(coeffs.fs));
-        WideIIR1Coefficients {
+        WideF64IIR1Coefficients {
             a,
             g,
             a1,
@@ -186,14 +186,14 @@ impl WideIIR1Coefficients {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct WideIIR1 {
+pub struct WideF64IIR1 {
     ic1eq: f64x4,
-    pub coeffs: WideIIR1Coefficients,
+    pub coeffs: WideF64IIR1Coefficients,
 }
 
-impl WideIIR1 {
-    pub fn new(coefficients: WideIIR1Coefficients) -> Self {
-        WideIIR1 {
+impl WideF64IIR1 {
+    pub fn new(coefficients: WideF64IIR1Coefficients) -> Self {
+        WideF64IIR1 {
             ic1eq: f64x4::ZERO,
             coeffs: coefficients,
         }
@@ -207,7 +207,7 @@ impl WideIIR1 {
         self.coeffs.m0 * input + self.coeffs.m1 * v2
     }
 
-    pub fn update_coefficients(&mut self, new_coefficients: WideIIR1Coefficients) {
+    pub fn update_coefficients(&mut self, new_coefficients: WideF64IIR1Coefficients) {
         self.coeffs = new_coefficients;
     }
 }
@@ -231,9 +231,9 @@ mod tests {
         let f0 = 1000.0;
 
         let coeffs = IIR1Coefficients::lowpass(f0, 0.0, fs);
-        let coeffs = WideIIR1Coefficients::from(coeffs);
+        let coeffs = WideF64IIR1Coefficients::from(coeffs);
 
-        let mut filter_left = WideIIR1::new(coeffs);
+        let mut filter_left = WideF64IIR1::new(coeffs);
 
         for i in 0..1000 {
             let output: [f64; 4] = filter_left

@@ -1,8 +1,10 @@
 use num_complex::Complex;
 
-use crate::units::ZSample;
+use crate::{units::ZSample, MAX_POLE_COUNT};
 
 use crate::units::FP;
+
+use wide::f64x4;
 
 #[derive(Copy, Clone, Debug)]
 pub struct IIR2Coefficients<T: FP> {
@@ -51,6 +53,10 @@ impl<T: FP> IIR2Coefficients<T> {
             m2: T::zero(),
             fs: T::zero(),
         }
+    }
+
+    pub fn empty_cascade() -> [IIR2Coefficients<T>; MAX_POLE_COUNT] {
+        [IIR2Coefficients::empty(); MAX_POLE_COUNT]
     }
 
     pub fn lowpass(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
@@ -289,10 +295,8 @@ impl<T: FP> IIR2<T> {
     }
 }
 
-use wide::f64x4;
-
 #[derive(Copy, Clone, Debug)]
-pub struct WideIIR2Coefficients {
+pub struct WideF64IIR2Coefficients {
     pub a: f64x4,
     pub g: f64x4,
     pub gpow2: f64x4,
@@ -306,8 +310,8 @@ pub struct WideIIR2Coefficients {
     pub fs: f64x4,
 }
 
-impl WideIIR2Coefficients {
-    pub fn from<T: FP>(coeffs: IIR2Coefficients<T>) -> WideIIR2Coefficients {
+impl WideF64IIR2Coefficients {
+    pub fn from<T: FP>(coeffs: IIR2Coefficients<T>) -> WideF64IIR2Coefficients {
         let a = f64x4::splat(Into::<f64>::into(coeffs.a));
         let g = f64x4::splat(Into::<f64>::into(coeffs.g));
         let k = f64x4::splat(Into::<f64>::into(coeffs.k));
@@ -318,7 +322,7 @@ impl WideIIR2Coefficients {
         let m1 = f64x4::splat(Into::<f64>::into(coeffs.m1));
         let m2 = f64x4::splat(Into::<f64>::into(coeffs.m2));
         let fs = f64x4::splat(Into::<f64>::into(coeffs.fs));
-        WideIIR2Coefficients {
+        WideF64IIR2Coefficients {
             a,
             g,
             gpow2: g * g,
@@ -332,20 +336,40 @@ impl WideIIR2Coefficients {
             fs,
         }
     }
+
+    pub const fn empty() -> WideF64IIR2Coefficients {
+        WideF64IIR2Coefficients {
+            a: f64x4::ZERO,
+            g: f64x4::ZERO,
+            gpow2: f64x4::ZERO,
+            k: f64x4::ZERO,
+            a1: f64x4::ZERO,
+            a2: f64x4::ZERO,
+            a3: f64x4::ZERO,
+            m0: f64x4::ZERO,
+            m1: f64x4::ZERO,
+            m2: f64x4::ZERO,
+            fs: f64x4::ZERO,
+        }
+    }
+
+    pub const fn empty_cascade() -> [WideF64IIR2Coefficients; MAX_POLE_COUNT] {
+        [WideF64IIR2Coefficients::empty(); MAX_POLE_COUNT]
+    }
 }
 
 /// Internal states and coefficients of the SVF form
 #[derive(Copy, Clone, Debug)]
-pub struct WideIIR2 {
+pub struct WideF64IIR2 {
     ic1eq: f64x4,
     ic2eq: f64x4,
-    pub coeffs: WideIIR2Coefficients,
+    pub coeffs: WideF64IIR2Coefficients,
 }
 
-impl WideIIR2 {
+impl WideF64IIR2 {
     /// Creates a SVF from a set of filter coefficients
-    pub fn new(coefficients: WideIIR2Coefficients) -> Self {
-        WideIIR2 {
+    pub fn new(coefficients: WideF64IIR2Coefficients) -> Self {
+        WideF64IIR2 {
             ic1eq: f64x4::ZERO,
             ic2eq: f64x4::ZERO,
             coeffs: coefficients,
@@ -363,7 +387,7 @@ impl WideIIR2 {
         self.coeffs.m0 * input + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
     }
 
-    pub fn update_coefficients(&mut self, new_coefficients: WideIIR2Coefficients) {
+    pub fn update_coefficients(&mut self, new_coefficients: WideF64IIR2Coefficients) {
         self.coeffs = new_coefficients;
     }
 }
@@ -390,9 +414,9 @@ mod tests {
         let bandwidth = 1.0;
 
         let coeffs = IIR2Coefficients::lowpass(f0, bandwidth.bw_to_q(f0, fs), 0.0, fs);
-        let coeffs = WideIIR2Coefficients::from(coeffs);
+        let coeffs = WideF64IIR2Coefficients::from(coeffs);
 
-        let mut filter_left = WideIIR2::new(coeffs);
+        let mut filter_left = WideF64IIR2::new(coeffs);
 
         for i in 0..1000 {
             let output: [f64; 4] = filter_left
