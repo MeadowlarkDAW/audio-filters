@@ -28,7 +28,18 @@ impl<T: FP> IIR1Coefficients<T> {
         y
     }
 
-    pub fn lowpass(f0: T, fs: T) -> IIR1Coefficients<T> {
+    pub fn empty() -> IIR1Coefficients<T> {
+        IIR1Coefficients {
+            a: T::zero(),
+            g: T::zero(),
+            a1: T::zero(),
+            m0: T::zero(),
+            m1: T::zero(),
+            fs: T::zero(),
+        }
+    }
+
+    pub fn lowpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
         let f0 = f0.min(fs * Into::<T>::into(0.5));
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
@@ -45,7 +56,7 @@ impl<T: FP> IIR1Coefficients<T> {
         }
     }
 
-    pub fn highpass(f0: T, fs: T) -> IIR1Coefficients<T> {
+    pub fn highpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
         let f0 = f0.min(fs * Into::<T>::into(0.5));
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
@@ -62,7 +73,7 @@ impl<T: FP> IIR1Coefficients<T> {
         }
     }
 
-    pub fn allpass(f0: T, fs: T) -> IIR1Coefficients<T> {
+    pub fn allpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
         let f0 = f0.min(fs * Into::<T>::into(0.5));
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
@@ -219,7 +230,7 @@ mod tests {
         let fs = 48000.0;
         let f0 = 1000.0;
 
-        let coeffs = IIR1Coefficients::lowpass(f0, fs);
+        let coeffs = IIR1Coefficients::lowpass(f0, 0.0, fs);
         let coeffs = WideIIR1Coefficients::from(coeffs);
 
         let mut filter_left = WideIIR1::new(coeffs);

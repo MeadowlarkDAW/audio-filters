@@ -37,7 +37,23 @@ impl<T: FP> IIR2Coefficients<T> {
         y
     }
 
-    pub fn lowpass(f0: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
+    pub fn empty() -> IIR2Coefficients<T> {
+        IIR2Coefficients {
+            a: T::zero(),
+            g: T::zero(),
+            gpow2: T::zero(),
+            k: T::zero(),
+            a1: T::zero(),
+            a2: T::zero(),
+            a3: T::zero(),
+            m0: T::zero(),
+            m1: T::zero(),
+            m2: T::zero(),
+            fs: T::zero(),
+        }
+    }
+
+    pub fn lowpass(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
         let f0 = f0.min(fs * Into::<T>::into(0.5));
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
@@ -62,7 +78,7 @@ impl<T: FP> IIR2Coefficients<T> {
             fs,
         }
     }
-    pub fn highpass(f0: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
+    pub fn highpass(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
         let f0 = f0.min(fs * Into::<T>::into(0.5));
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
@@ -87,7 +103,7 @@ impl<T: FP> IIR2Coefficients<T> {
             fs,
         }
     }
-    pub fn bandpass(f0: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
+    pub fn bandpass(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
         let f0 = f0.min(fs * Into::<T>::into(0.5));
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
@@ -112,7 +128,7 @@ impl<T: FP> IIR2Coefficients<T> {
             fs,
         }
     }
-    pub fn notch(f0: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
+    pub fn notch(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
         let f0 = f0.min(fs * Into::<T>::into(0.5));
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
@@ -137,7 +153,7 @@ impl<T: FP> IIR2Coefficients<T> {
             fs,
         }
     }
-    pub fn allpass(f0: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
+    pub fn allpass(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
         let f0 = f0.min(fs * Into::<T>::into(0.5));
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
@@ -373,7 +389,7 @@ mod tests {
         let f0 = 1000.0;
         let bandwidth = 1.0;
 
-        let coeffs = IIR2Coefficients::lowpass(f0, bandwidth.bw_to_q(f0, fs), fs);
+        let coeffs = IIR2Coefficients::lowpass(f0, bandwidth.bw_to_q(f0, fs), 0.0, fs);
         let coeffs = WideIIR2Coefficients::from(coeffs);
 
         let mut filter_left = WideIIR2::new(coeffs);
