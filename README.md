@@ -1,11 +1,13 @@
-# Audio Filters
+# Audio Filters - WIP
 A collection of filters for real-time audio processing
+
+The overall design is in progress, there can be frequent (usually minor) breaking changes.
 
 ## Feature Progress
     
 - [x] `#![no_std]` (via [libm](https://github.com/rust-lang/libm))
 - [x] f32 & f64 capable (via [num-traits](https://github.com/rust-num/num-traits))
-- [ ] SIMD
+- [ ] SIMD (Some experimental support)
 - [ ] Documentation
 - [ ] Tests
 
