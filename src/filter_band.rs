@@ -220,6 +220,7 @@ impl<T: FP> FilterBand<T> {
     }
 
     pub fn process_even_order_cascade(&mut self, x: T) -> T {
+        assert!(self.iir2.len() >= self.iir2_cascade_count);
         let mut x = x;
         for i in 0..self.iir2_cascade_count {
             x = self.iir2[i].process(x);
@@ -228,6 +229,7 @@ impl<T: FP> FilterBand<T> {
     }
 
     pub fn process_odd_order_cascade(&mut self, x: T) -> T {
+        assert!(self.iir2.len() >= self.iir2_cascade_count);
         let mut x = self.iir1.process(x);
         for i in 0..self.iir2_cascade_count {
             x = self.iir2[i].process(x);

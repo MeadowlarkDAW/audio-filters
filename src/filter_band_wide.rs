@@ -64,6 +64,7 @@ impl WideF64FilterBand {
     }
 
     pub fn process_even_order_cascade(&mut self, x: f64x4) -> f64x4 {
+        assert!(self.iir2.len() >= self.iir2_cascade_count);
         let mut x = x;
         for i in 0..self.iir2_cascade_count {
             x = self.iir2[i].process(x);
@@ -72,6 +73,7 @@ impl WideF64FilterBand {
     }
 
     pub fn process_odd_order_cascade(&mut self, x: f64x4) -> f64x4 {
+        assert!(self.iir2.len() >= self.iir2_cascade_count);
         let mut x = self.iir1.process(x);
         for i in 0..self.iir2_cascade_count {
             x = self.iir2[i].process(x);
@@ -151,6 +153,7 @@ impl WideF32FilterBand {
     }
 
     pub fn process_even_order_cascade(&mut self, x: f32x8) -> f32x8 {
+        assert!(self.iir2.len() >= self.iir2_cascade_count);
         let mut x = x;
         for i in 0..self.iir2_cascade_count {
             x = self.iir2[i].process(x);
@@ -159,6 +162,7 @@ impl WideF32FilterBand {
     }
 
     pub fn process_odd_order_cascade(&mut self, x: f32x8) -> f32x8 {
+        assert!(self.iir2.len() >= self.iir2_cascade_count);
         let mut x = self.iir1.process(x);
         for i in 0..self.iir2_cascade_count {
             x = self.iir2[i].process(x);

@@ -1,7 +1,6 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(test)]
 
-pub mod benchmark;
 pub mod units;
 
 pub mod filter_band;
