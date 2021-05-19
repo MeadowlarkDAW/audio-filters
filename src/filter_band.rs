@@ -225,16 +225,16 @@ impl<T: FP> FilterBandCoefficients<T> {
 pub struct FilterBand<T: FP> {
     iir1: IIR1<T>,
     iir2: [IIR2<T>; MAX_POLE_COUNT],
-    pub coeffs: FilterBandCoefficients<T>,
+    iir2_cascade_count: usize,
     pub process: fn(&mut Self, T) -> T,
 }
 
 impl<T: FP> FilterBand<T> {
-    pub fn from(coeffs: FilterBandCoefficients<T>) -> FilterBand<T> {
+    pub fn from(coeffs: &FilterBandCoefficients<T>) -> FilterBand<T> {
         FilterBand {
             iir1: IIR1::<T>::new(coeffs.iir1),
             iir2: [IIR2::<T>::new(coeffs.iir2[0]); MAX_POLE_COUNT],
-            coeffs,
+            iir2_cascade_count: coeffs.iir2_cascade_count,
             process: FilterBand::get_process(coeffs.process),
         }
     }
@@ -249,7 +249,7 @@ impl<T: FP> FilterBand<T> {
 
     pub fn process_even_order_cascade(&mut self, x: T) -> T {
         let mut x = x;
-        for i in 0..self.coeffs.iir2_cascade_count {
+        for i in 0..self.iir2_cascade_count {
             x = self.iir2[i].process(x);
         }
         x
@@ -257,7 +257,7 @@ impl<T: FP> FilterBand<T> {
 
     pub fn process_odd_order_cascade(&mut self, x: T) -> T {
         let mut x = self.iir1.process(x);
-        for i in 0..self.coeffs.iir2_cascade_count {
+        for i in 0..self.iir2_cascade_count {
             x = self.iir2[i].process(x);
         }
         x
@@ -272,12 +272,12 @@ impl<T: FP> FilterBand<T> {
         }
     }
 
-    pub fn update(&mut self, coeffs: FilterBandCoefficients<T>) {
-        self.coeffs = coeffs;
+    pub fn update(&mut self, coeffs: &FilterBandCoefficients<T>) {
         for (filter, coeff) in self.iir2.iter_mut().zip(coeffs.iir2.iter()) {
             filter.update_coefficients(*coeff)
         }
         self.iir1.update_coefficients(coeffs.iir1);
+        self.iir2_cascade_count = coeffs.iir2_cascade_count;
         self.process = FilterBand::get_process(coeffs.process);
     }
 }
@@ -303,8 +303,8 @@ mod tests {
 
         let coeffs = FilterBandCoefficients::highshelf(f0, gain, width, slope, fs);
 
-        let mut filter_left = FilterBand::from(coeffs);
-        let mut filter_right = FilterBand::from(coeffs);
+        let mut filter_left = FilterBand::from(&coeffs);
+        let mut filter_right = FilterBand::from(&coeffs);
 
         for i in 0..1000 {
             left[i] = (filter_left.process)(&mut filter_left, left[i]);

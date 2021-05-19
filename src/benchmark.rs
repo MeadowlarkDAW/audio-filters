@@ -17,12 +17,14 @@ mod tests {
     ) {
         let fs = 48000.0;
 
-        let mut filter1 = FilterBand::from(FilterBandCoefficients::highpass(100.0, 1.0, order, fs));
-        let mut filter2 = FilterBand::from(FilterBandCoefficients::lowpass(5000.0, 1.0, order, fs));
-        let mut filter3 = FilterBand::from(FilterBandCoefficients::highshelf(
+        let mut filter1 =
+            FilterBand::from(&FilterBandCoefficients::highpass(100.0, 1.0, order, fs));
+        let mut filter2 =
+            FilterBand::from(&FilterBandCoefficients::lowpass(5000.0, 1.0, order, fs));
+        let mut filter3 = FilterBand::from(&FilterBandCoefficients::highshelf(
             2000.0, 6.0, 1.0, order, fs,
         ));
-        let mut filter4 = FilterBand::from(FilterBandCoefficients::bell(3000.0, -6.0, 1.0, fs));
+        let mut filter4 = FilterBand::from(&FilterBandCoefficients::bell(3000.0, -6.0, 1.0, fs));
 
         for (input, output) in input_samples.iter().zip(output_samples.iter_mut()) {
             let mut sample = *input;

@@ -39,17 +39,16 @@ A collection of filters for real-time audio processing
 - [ ] Linear Phase Mode
 
 ```rust
-let sample_rate = 48000.0;
+let fs = 48000.0;
 let f0 = 1000.0;
 let gain = 6.0;
-let bandwidth = 1.0;
+let width = 1.0;
 let slope = 4.0;
 
-let mut filter_left = FilterBand::new(sample_rate);
-let mut filter_right = FilterBand::new(sample_rate);
+let coeffs = FilterBandCoefficients::highshelf(f0, gain, width, slope, fs);
 
-filter_left.highshelf(f0, gain, bandwidth, slope, sample_rate);
-filter_right.mimic_band(&filter_left);
+let mut filter_left = FilterBand::from(&coeffs);
+let mut filter_right = FilterBand::from(&coeffs);
 
 for i in 0..1000 {
     left[i] = (filter_left.process)(&mut filter_left, left[i]);
