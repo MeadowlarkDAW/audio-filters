@@ -52,7 +52,7 @@ impl<T: FP> FilterBandCoefficients<T> {
             f0,
             bw,
             slope,
-            T::zero(),
+            T::N0,
             fs,
             IIR1Coefficients::lowpass,
             IIR2Coefficients::lowpass,
@@ -64,7 +64,7 @@ impl<T: FP> FilterBandCoefficients<T> {
             f0,
             bw,
             slope,
-            T::zero(),
+            T::N0,
             fs,
             IIR1Coefficients::highpass,
             IIR2Coefficients::highpass,
@@ -76,7 +76,7 @@ impl<T: FP> FilterBandCoefficients<T> {
             f0,
             bw,
             slope,
-            T::zero(),
+            T::N0,
             fs,
             IIR1Coefficients::allpass,
             IIR2Coefficients::allpass,
@@ -158,7 +158,7 @@ impl<T: FP> FilterBandCoefficients<T> {
 
     pub fn notch(f0: T, _gain: T, bw: T, fs: T) -> FilterBandCoefficients<T> {
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
-        iir2[0] = IIR2Coefficients::notch(f0, bw.bw_to_q(f0, fs), T::zero(), fs);
+        iir2[0] = IIR2Coefficients::notch(f0, bw.bw_to_q(f0, fs), T::N0, fs);
         FilterBandCoefficients {
             iir1: IIR1Coefficients::empty(),
             iir2,
@@ -170,7 +170,7 @@ impl<T: FP> FilterBandCoefficients<T> {
 
     pub fn bandpass(f0: T, _gain: T, bw: T, fs: T) -> FilterBandCoefficients<T> {
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
-        iir2[0] = IIR2Coefficients::bandpass(f0, bw.bw_to_q(f0, fs), T::zero(), fs);
+        iir2[0] = IIR2Coefficients::bandpass(f0, bw.bw_to_q(f0, fs), T::N0, fs);
         FilterBandCoefficients {
             iir1: IIR1Coefficients::empty(),
             iir2,

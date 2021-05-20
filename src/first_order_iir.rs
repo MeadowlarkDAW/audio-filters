@@ -4,7 +4,7 @@ use crate::units::FP;
 
 pub fn get_z<T: FP>(f_hz: T, fs: T) -> Complex<T> {
     let z = -T::TAU() * f_hz / fs;
-    z.cos() + z.sin() * Complex::<T>::new(T::zero(), T::one())
+    z.cos() + z.sin() * Complex::<T>::new(T::N0, T::N1)
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -21,9 +21,9 @@ impl<T: FP> IIR1Coefficients<T> {
     pub fn get_bode_sample(self, z: Complex<T>) -> Complex<T> {
         //Use y.norm() for amplitude and y.arg().to_degrees() for phase. Add to combine phase.
 
-        let denominator = self.g + z * (self.g - T::one()) + T::one();
+        let denominator = self.g + z * (self.g - T::N1) + T::N1;
 
-        let y = self.m0 + (self.m1 * self.g * (z + T::one())) / denominator;
+        let y = self.m0 + (self.m1 * self.g * (z + T::N1)) / denominator;
 
         y
     }
@@ -31,22 +31,22 @@ impl<T: FP> IIR1Coefficients<T> {
     //TODO make const once possible
     pub fn empty() -> IIR1Coefficients<T> {
         IIR1Coefficients {
-            a: T::zero(),
-            g: T::zero(),
-            a1: T::zero(),
-            m0: T::zero(),
-            m1: T::zero(),
-            fs: T::zero(),
+            a: T::N0,
+            g: T::N0,
+            a1: T::N0,
+            m0: T::N0,
+            m1: T::N0,
+            fs: T::N0,
         }
     }
 
     pub fn lowpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
         let f0 = f0.min(fs * T::N0_5);
-        let a = T::one();
+        let a = T::N1;
         let g = (T::PI() * f0 / fs).tan();
-        let a1 = g / (T::one() + g);
-        let m0 = T::zero();
-        let m1 = T::one();
+        let a1 = g / (T::N1 + g);
+        let m0 = T::N0;
+        let m1 = T::N1;
         IIR1Coefficients {
             a,
             g,
@@ -59,11 +59,11 @@ impl<T: FP> IIR1Coefficients<T> {
 
     pub fn highpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
         let f0 = f0.min(fs * T::N0_5);
-        let a = T::one();
+        let a = T::N1;
         let g = (T::PI() * f0 / fs).tan();
-        let a1 = g / (T::one() + g);
-        let m0 = T::one();
-        let m1 = -T::one();
+        let a1 = g / (T::N1 + g);
+        let m0 = T::N1;
+        let m1 = -T::N1;
         IIR1Coefficients {
             a,
             g,
@@ -76,10 +76,10 @@ impl<T: FP> IIR1Coefficients<T> {
 
     pub fn allpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
         let f0 = f0.min(fs * T::N0_5);
-        let a = T::one();
+        let a = T::N1;
         let g = (T::PI() * f0 / fs).tan();
-        let a1 = g / (T::one() + g);
-        let m0 = T::one();
+        let a1 = g / (T::N1 + g);
+        let m0 = T::N1;
         let m1 = -T::N2;
         IIR1Coefficients {
             a,
@@ -95,9 +95,9 @@ impl<T: FP> IIR1Coefficients<T> {
         let f0 = f0.min(fs * T::N0_5);
         let a = T::N10.powf(db_gain / T::N20);
         let g = (T::PI() * f0 / fs).tan() / (a).sqrt();
-        let a1 = g / (T::one() + g);
-        let m0 = T::one();
-        let m1 = a - T::one();
+        let a1 = g / (T::N1 + g);
+        let m0 = T::N1;
+        let m1 = a - T::N1;
         IIR1Coefficients {
             a,
             g,
@@ -112,9 +112,9 @@ impl<T: FP> IIR1Coefficients<T> {
         let f0 = f0.min(fs * T::N0_5);
         let a = T::N10.powf(db_gain / T::N20);
         let g = (T::PI() * f0 / fs).tan() * (a).sqrt();
-        let a1 = g / (T::one() + g);
+        let a1 = g / (T::N1 + g);
         let m0 = a;
-        let m1 = T::one() - a;
+        let m1 = T::N1 - a;
         IIR1Coefficients {
             a,
             g,
@@ -137,7 +137,7 @@ impl<T: FP> IIR1<T> {
     /// Creates a SVF from a set of filter coefficients
     pub fn new(coefficients: IIR1Coefficients<T>) -> Self {
         IIR1 {
-            ic1eq: T::zero(),
+            ic1eq: T::N0,
             coeffs: coefficients,
         }
     }

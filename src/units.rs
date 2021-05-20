@@ -19,6 +19,7 @@ pub trait FP:
     + Mul<Complex<Self>, Output = Complex<Self>>
     + Sub<Complex<Self>, Output = Complex<Self>>
 {
+    const N00_5: Self;
     const N0: Self;
     const N0_5: Self;
     const N1: Self;
@@ -36,6 +37,7 @@ pub trait FP:
 }
 
 impl FP for f32 {
+    const N00_5: f32 = 0.05;
     const N0: f32 = 0.0;
     const N0_5: f32 = 0.5;
     const N1: f32 = 1.0;
@@ -53,6 +55,7 @@ impl FP for f32 {
 }
 
 impl FP for f64 {
+    const N00_5: f64 = 0.05;
     const N0: f64 = 0.0;
     const N0_5: f64 = 0.5;
     const N1: f64 = 1.0;
@@ -88,21 +91,21 @@ impl<T: FP> Units<T> for T {
         (self - bottom) / (top - bottom)
     }
     fn db_to_lin(self) -> T {
-        Into::<T>::into(10.0).powf(self * Into::<T>::into(0.05))
+        T::N10.powf(self * T::N00_5)
     }
     fn lin_to_db(self) -> T {
-        (self.max(T::zero())).log10() * Into::<T>::into(20.0)
+        (self.max(T::N0)).log10() * T::N20
     }
     fn sign(self, b: T) -> T {
-        if b < T::zero() {
+        if b < T::N0 {
             -self
         } else {
             self
         }
     }
     fn bw_to_q(self, _f0: T, _fs: T) -> T {
-        let two = NumCast::from(2.0).unwrap();
-        T::one() / (two * (T::LN_2() / two * self).sinh())
+        let two = T::N2;
+        T::N1 / (two * (T::LN_2() / two * self).sinh())
     }
 }
 
@@ -116,8 +119,8 @@ pub struct ZSample<T> {
 impl<T: FP> ZSample<T> {
     pub fn new(f_hz: T, fs: T) -> ZSample<T> {
         let z = -T::TAU() * f_hz / fs;
-        let z: Complex<T> = Into::<T>::into(z.cos())
-            + Into::<T>::into(z.sin()) * Complex::<T>::new(T::zero(), T::one());
+        let z: Complex<T> =
+            Into::<T>::into(z.cos()) + Into::<T>::into(z.sin()) * Complex::<T>::new(T::N0, T::N1);
         ZSample {
             z,
             pow1: z,
@@ -130,8 +133,8 @@ pub fn butterworth_cascade_q<T: FP>(filter_order: u8, pole: u8) -> T {
     let mut pole = pole;
     let pole_inc: T = T::PI() / (NumCast::from(filter_order).unwrap());
     let even_order = filter_order & 1 == 0;
-    let point_five = NumCast::from(0.5).unwrap();
-    let two: T = NumCast::from(2.0).unwrap();
+    let point_five = T::N0_5;
+    let two: T = T::N2;
 
     let first_angle = if even_order {
         pole_inc * point_five
@@ -144,7 +147,7 @@ pub fn butterworth_cascade_q<T: FP>(filter_order: u8, pole: u8) -> T {
     };
     let fpole: T = NumCast::from(pole).unwrap();
     let a: T = first_angle + fpole * pole_inc;
-    T::one() / (two * a.cos())
+    T::N1 / (two * a.cos())
 }
 
 #[cfg(test)]
