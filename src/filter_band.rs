@@ -139,7 +139,7 @@ impl<T: FP> FilterBandCoefficients<T> {
         } else {
             process = ProcessType::ProcessEvenOrderCascade;
         }
-        partial_gain = partial_gain * Into::<T>::into(2.0);
+        partial_gain = partial_gain * T::N2;
         let q_value = bw.bw_to_q(f0, fs);
         let q_offset = q_value * T::FRAC_1_SQRT_2(); //butterworth Q
         let iir2_cascade_count = ((u_slope as usize - start_pole) / 2usize) as usize;

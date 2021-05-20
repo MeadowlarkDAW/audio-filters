@@ -1,6 +1,7 @@
 use crate::{
     second_order_iir::IIR2Coefficients,
-    units::{F32x8, F64x4, FP},
+    units::FP,
+    wide_consts::{F32x8, F64x4},
     MAX_POLE_COUNT,
 };
 use num_traits::NumCast;
@@ -92,8 +93,8 @@ impl WideF64IIR2 {
         let v3 = input - self.ic2eq;
         let v1 = self.coeffs.a1 * self.ic1eq + self.coeffs.a2 * v3;
         let v2 = self.ic2eq + self.coeffs.a2 * self.ic1eq + self.coeffs.a3 * v3;
-        self.ic1eq = F64x4::TWO * v1 - self.ic1eq;
-        self.ic2eq = F64x4::TWO * v2 - self.ic2eq;
+        self.ic1eq = F64x4::N2 * v1 - self.ic1eq;
+        self.ic2eq = F64x4::N2 * v2 - self.ic2eq;
 
         self.coeffs.m0 * input + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
     }
@@ -189,8 +190,8 @@ impl WideF32IIR2 {
         let v3 = input - self.ic2eq;
         let v1 = self.coeffs.a1 * self.ic1eq + self.coeffs.a2 * v3;
         let v2 = self.ic2eq + self.coeffs.a2 * self.ic1eq + self.coeffs.a3 * v3;
-        self.ic1eq = F32x8::TWO * v1 - self.ic1eq;
-        self.ic2eq = F32x8::TWO * v2 - self.ic2eq;
+        self.ic1eq = F32x8::N2 * v1 - self.ic1eq;
+        self.ic2eq = F32x8::N2 * v2 - self.ic2eq;
 
         self.coeffs.m0 * input + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
     }

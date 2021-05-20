@@ -4,9 +4,6 @@ use num_complex::Complex;
 
 use num_traits::{Float, FloatConst, NumCast, One, Zero};
 
-use wide::f32x8;
-use wide::f64x4;
-
 pub trait FP:
     Sized
     + Copy
@@ -22,24 +19,54 @@ pub trait FP:
     + Mul<Complex<Self>, Output = Complex<Self>>
     + Sub<Complex<Self>, Output = Complex<Self>>
 {
+    const N0: Self;
+    const N0_5: Self;
+    const N1: Self;
+    const N2: Self;
+    const N3: Self;
+    const N4: Self;
+    const N5: Self;
+    const N6: Self;
+    const N7: Self;
+    const N8: Self;
+    const N9: Self;
+    const N10: Self;
+    const N20: Self;
+    const N40: Self;
 }
 
-impl<T> FP for T
-where
-    T: Sized,
-    T: Copy,
-    T: Float,
-    T: Zero,
-    T: One,
-    T: FloatConst,
-    T: From<f32>,
-    T: From<u8>,
-    T: Into<f64>,
-    T: Into<Complex<Self>>,
-    T: Add<Complex<Self>, Output = Complex<Self>>,
-    T: Mul<Complex<Self>, Output = Complex<Self>>,
-    T: Sub<Complex<Self>, Output = Complex<Self>>,
-{
+impl FP for f32 {
+    const N0: f32 = 0.0;
+    const N0_5: f32 = 0.5;
+    const N1: f32 = 1.0;
+    const N2: f32 = 2.0;
+    const N3: f32 = 3.0;
+    const N4: f32 = 4.0;
+    const N5: f32 = 5.0;
+    const N6: f32 = 6.0;
+    const N7: f32 = 7.0;
+    const N8: f32 = 8.0;
+    const N9: f32 = 9.0;
+    const N10: f32 = 10.0;
+    const N20: f32 = 20.0;
+    const N40: f32 = 40.0;
+}
+
+impl FP for f64 {
+    const N0: f64 = 0.0;
+    const N0_5: f64 = 0.5;
+    const N1: f64 = 1.0;
+    const N2: f64 = 2.0;
+    const N3: f64 = 3.0;
+    const N4: f64 = 4.0;
+    const N5: f64 = 5.0;
+    const N6: f64 = 6.0;
+    const N7: f64 = 7.0;
+    const N8: f64 = 8.0;
+    const N9: f64 = 9.0;
+    const N10: f64 = 10.0;
+    const N20: f64 = 20.0;
+    const N40: f64 = 40.0;
 }
 
 /// Used to implement conversions to the Hertz struct
@@ -118,54 +145,6 @@ pub fn butterworth_cascade_q<T: FP>(filter_order: u8, pole: u8) -> T {
     let fpole: T = NumCast::from(pole).unwrap();
     let a: T = first_angle + fpole * pole_inc;
     T::one() / (two * a.cos())
-}
-
-#[allow(non_camel_case_types)]
-#[repr(C, align(16))]
-union ConstUnionHack128bit {
-    f64a4: [f64; 4],
-    f32a8: [f32; 8],
-    f32a4: [f32; 4],
-    i32a4: [i32; 4],
-    i64a4: [i64; 4],
-    f64a2: [f64; 2],
-    f32x8: f32x8,
-    f64x4: f64x4,
-    u128: u128,
-}
-
-macro_rules! const_f64_as_f64x4 {
-    ($i:ident, $f:expr) => {
-        pub const $i: f64x4 = unsafe {
-            ConstUnionHack128bit {
-                f64a4: [$f, $f, $f, $f],
-            }
-            .f64x4
-        };
-    };
-}
-
-macro_rules! const_f64_as_f32x8 {
-    ($i:ident, $f:expr) => {
-        pub const $i: f32x8 = unsafe {
-            ConstUnionHack128bit {
-                f64a4: [$f, $f, $f, $f],
-            }
-            .f32x8
-        };
-    };
-}
-
-#[allow(non_snake_case)]
-pub(crate) mod F32x8 {
-    use super::*;
-    const_f64_as_f32x8!(TWO, 2.0);
-}
-
-#[allow(non_snake_case)]
-pub(crate) mod F64x4 {
-    use super::*;
-    const_f64_as_f64x4!(TWO, 2.0);
 }
 
 #[cfg(test)]

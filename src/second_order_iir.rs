@@ -23,20 +23,19 @@ impl<T: FP> IIR2Coefficients<T> {
     pub fn get_bode_sample(self, z: ZSample<T>) -> Complex<T> {
         //Use y.norm() for amplitude and y.arg().to_degrees() for phase. Add to combine phase.
 
-        let two: T = 2.0.into();
-
         let denominator = (self.gpow2 + self.g * self.k + T::one())
-            + two * (self.gpow2 - T::one()) * z.pow1
+            + T::N2 * (self.gpow2 - T::one()) * z.pow1
             + (self.gpow2 - self.g * self.k + T::one()) * z.pow2;
 
         let y = self.m0
             + (self.m1 * self.g * (T::one() - z.pow2)
-                + self.m2 * self.gpow2 * (T::one() + two * z.pow1 + z.pow2))
+                + self.m2 * self.gpow2 * (T::one() + T::N2 * z.pow1 + z.pow2))
                 / denominator;
 
         y
     }
 
+    //TODO make const once possible
     pub fn empty() -> IIR2Coefficients<T> {
         IIR2Coefficients {
             a: T::zero(),
@@ -58,7 +57,7 @@ impl<T: FP> IIR2Coefficients<T> {
     }
 
     pub fn lowpass(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let f0 = f0.min(fs * T::N0_5);
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
         let k = T::one() / q_value;
@@ -83,7 +82,7 @@ impl<T: FP> IIR2Coefficients<T> {
         }
     }
     pub fn highpass(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let f0 = f0.min(fs * T::N0_5);
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
         let k = T::one() / q_value;
@@ -108,7 +107,7 @@ impl<T: FP> IIR2Coefficients<T> {
         }
     }
     pub fn bandpass(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let f0 = f0.min(fs * T::N0_5);
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
         let k = T::one() / q_value;
@@ -133,7 +132,7 @@ impl<T: FP> IIR2Coefficients<T> {
         }
     }
     pub fn notch(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let f0 = f0.min(fs * T::N0_5);
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
         let k = T::one() / q_value;
@@ -158,7 +157,7 @@ impl<T: FP> IIR2Coefficients<T> {
         }
     }
     pub fn allpass(f0: T, q_value: T, _db_gain: T, fs: T) -> IIR2Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let f0 = f0.min(fs * T::N0_5);
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
         let k = T::one() / q_value;
@@ -166,7 +165,7 @@ impl<T: FP> IIR2Coefficients<T> {
         let a2 = g * a1;
         let a3 = g * a2;
         let m0 = T::one();
-        let m1 = -Into::<T>::into(2.0) * k;
+        let m1 = -T::N2 * k;
         let m2 = T::zero();
         IIR2Coefficients {
             a,
@@ -183,8 +182,8 @@ impl<T: FP> IIR2Coefficients<T> {
         }
     }
     pub fn lowshelf(f0: T, q_value: T, db_gain: T, fs: T) -> IIR2Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
-        let a = Into::<T>::into(10.0).powf(db_gain / Into::<T>::into(40.0));
+        let f0 = f0.min(fs * T::N0_5);
+        let a = T::N10.powf(db_gain / T::N40);
         let g = (T::PI() * f0 / fs).tan() / a.sqrt();
         let k = T::one() / q_value;
         let a1 = T::one() / (T::one() + g * (g + k));
@@ -208,8 +207,8 @@ impl<T: FP> IIR2Coefficients<T> {
         }
     }
     pub fn highshelf(f0: T, q_value: T, db_gain: T, fs: T) -> IIR2Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
-        let a = Into::<T>::into(10.0).powf(db_gain / Into::<T>::into(40.0));
+        let f0 = f0.min(fs * T::N0_5);
+        let a = T::N10.powf(db_gain / T::N40);
         let g = (T::PI() * f0 / fs).tan() * a.sqrt();
         let k = T::one() / q_value;
         let a1 = T::one() / (T::one() + g * (g + k));
@@ -233,8 +232,8 @@ impl<T: FP> IIR2Coefficients<T> {
         }
     }
     pub fn bell(f0: T, q_value: T, db_gain: T, fs: T) -> IIR2Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
-        let a = Into::<T>::into(10.0).powf(db_gain / Into::<T>::into(40.0));
+        let f0 = f0.min(fs * T::N0_5);
+        let a = T::N10.powf(db_gain / T::N40);
         let g = (T::PI() * f0 / fs).tan();
         let k = T::one() / (q_value * a);
         let a1 = T::one() / (T::one() + g * (g + k));
@@ -278,12 +277,11 @@ impl<T: FP> IIR2<T> {
     }
 
     pub fn process(&mut self, input: T) -> T {
-        let two: T = 2.0.into();
         let v3 = input - self.ic2eq;
         let v1 = self.coeffs.a1 * self.ic1eq + self.coeffs.a2 * v3;
         let v2 = self.ic2eq + self.coeffs.a2 * self.ic1eq + self.coeffs.a3 * v3;
-        self.ic1eq = two * v1 - self.ic1eq;
-        self.ic2eq = two * v2 - self.ic2eq;
+        self.ic1eq = T::N2 * v1 - self.ic1eq;
+        self.ic2eq = T::N2 * v2 - self.ic2eq;
 
         self.coeffs.m0 * input + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
     }

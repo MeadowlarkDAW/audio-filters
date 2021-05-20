@@ -28,6 +28,7 @@ impl<T: FP> IIR1Coefficients<T> {
         y
     }
 
+    //TODO make const once possible
     pub fn empty() -> IIR1Coefficients<T> {
         IIR1Coefficients {
             a: T::zero(),
@@ -40,7 +41,7 @@ impl<T: FP> IIR1Coefficients<T> {
     }
 
     pub fn lowpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let f0 = f0.min(fs * T::N0_5);
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
         let a1 = g / (T::one() + g);
@@ -57,7 +58,7 @@ impl<T: FP> IIR1Coefficients<T> {
     }
 
     pub fn highpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let f0 = f0.min(fs * T::N0_5);
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
         let a1 = g / (T::one() + g);
@@ -74,12 +75,12 @@ impl<T: FP> IIR1Coefficients<T> {
     }
 
     pub fn allpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
+        let f0 = f0.min(fs * T::N0_5);
         let a = T::one();
         let g = (T::PI() * f0 / fs).tan();
         let a1 = g / (T::one() + g);
         let m0 = T::one();
-        let m1 = -Into::<T>::into(2.0);
+        let m1 = -T::N2;
         IIR1Coefficients {
             a,
             g,
@@ -91,8 +92,8 @@ impl<T: FP> IIR1Coefficients<T> {
     }
 
     pub fn lowshelf(f0: T, db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
-        let a = Into::<T>::into(10.0).powf(db_gain / Into::<T>::into(20.0));
+        let f0 = f0.min(fs * T::N0_5);
+        let a = T::N10.powf(db_gain / T::N20);
         let g = (T::PI() * f0 / fs).tan() / (a).sqrt();
         let a1 = g / (T::one() + g);
         let m0 = T::one();
@@ -108,8 +109,8 @@ impl<T: FP> IIR1Coefficients<T> {
     }
 
     pub fn highshelf(f0: T, db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * Into::<T>::into(0.5));
-        let a = Into::<T>::into(10.0).powf(db_gain / Into::<T>::into(20.0));
+        let f0 = f0.min(fs * T::N0_5);
+        let a = T::N10.powf(db_gain / T::N20);
         let g = (T::PI() * f0 / fs).tan() * (a).sqrt();
         let a1 = g / (T::one() + g);
         let m0 = a;
