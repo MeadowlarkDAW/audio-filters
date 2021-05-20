@@ -1,6 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(test)]
 
+pub mod const_butterworth;
 pub mod units;
 pub mod wide_consts;
 

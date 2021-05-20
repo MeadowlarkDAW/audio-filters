@@ -4,6 +4,8 @@ use num_complex::Complex;
 
 use num_traits::{Float, FloatConst, NumCast, One, Zero};
 
+use crate::const_butterworth::{CONST_BUTTERWORTHF32, CONST_BUTTERWORTHF64};
+
 pub trait FP:
     Sized
     + Copy
@@ -34,6 +36,7 @@ pub trait FP:
     const N10: Self;
     const N20: Self;
     const N40: Self;
+    const BUTTERWORTH: [[Self; 32]; 32];
 }
 
 impl FP for f32 {
@@ -52,6 +55,7 @@ impl FP for f32 {
     const N10: f32 = 10.0;
     const N20: f32 = 20.0;
     const N40: f32 = 40.0;
+    const BUTTERWORTH: [[f32; 32]; 32] = CONST_BUTTERWORTHF32;
 }
 
 impl FP for f64 {
@@ -70,6 +74,7 @@ impl FP for f64 {
     const N10: f64 = 10.0;
     const N20: f64 = 20.0;
     const N40: f64 = 40.0;
+    const BUTTERWORTH: [[f64; 32]; 32] = CONST_BUTTERWORTHF64;
 }
 
 /// Used to implement conversions to the Hertz struct
@@ -129,29 +134,30 @@ impl<T: FP> ZSample<T> {
     }
 }
 
-pub fn butterworth_cascade_q<T: FP>(filter_order: u8, pole: u8) -> T {
+//the output of this is stored as const [[T; 32]; 32] in const_butterworth.rs
+pub fn butterworth_cascade_q<T: FP>(filter_order: usize, pole: usize) -> T {
+    let filter_order = NumCast::from(filter_order).unwrap();
     let mut pole = pole;
-    let pole_inc: T = T::PI() / (NumCast::from(filter_order).unwrap());
-    let even_order = filter_order & 1 == 0;
-    let point_five = T::N0_5;
-    let two: T = T::N2;
+    let pole_inc: T = T::PI() / filter_order;
+    let even_order = filter_order % T::N2 == T::N0;
 
     let first_angle = if even_order {
-        pole_inc * point_five
+        pole_inc * T::N0_5
     } else {
         if pole == 0 {
-            return point_five; //Also needs to be 1 pole (not biquad)
+            return T::N0_5; //Also needs to be 1 pole (not biquad)
         }
-        pole -= 1;
+        pole = pole - 1;
         pole_inc
     };
     let fpole: T = NumCast::from(pole).unwrap();
     let a: T = first_angle + fpole * pole_inc;
-    T::N1 / (two * a.cos())
+    T::N1 / (T::N2 * a.cos())
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]

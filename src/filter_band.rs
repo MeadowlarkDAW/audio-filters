@@ -1,5 +1,3 @@
-use core::u8;
-
 use crate::units::FP;
 use num_complex::Complex;
 
@@ -16,7 +14,7 @@ pub enum ProcessType {
 use crate::{
     first_order_iir::{IIR1Coefficients, IIR1},
     second_order_iir::{IIR2Coefficients, IIR2},
-    units::{butterworth_cascade_q, Units, ZSample},
+    units::{Units, ZSample},
     MAX_POLE_COUNT,
 };
 
@@ -116,17 +114,16 @@ impl<T: FP> FilterBandCoefficients<T> {
         iir1_func: fn(T, T, T) -> IIR1Coefficients<T>,
         iir2_func: fn(T, T, T, T) -> IIR2Coefficients<T>,
     ) -> FilterBandCoefficients<T> {
-        let u_slope: usize = NumCast::from(slope).unwrap();
-        let odd_order = u_slope & 1usize == 1usize;
-        let iir1_enabled = odd_order;
-        let start_pole = iir1_enabled as usize;
-        let mut partial_gain = gain / NumCast::from(u_slope).unwrap();
+        let slope = slope.floor();
+        let odd_order = slope % T::N2;
+        let iir1_enabled = odd_order == T::N1;
+        let mut partial_gain = gain / slope;
         let mut iir1 = IIR1Coefficients::empty();
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
         let mut process = ProcessType::ProcessIIR1Only;
-        if odd_order {
+        if iir1_enabled {
             iir1 = (iir1_func)(f0, partial_gain, fs);
-            if u_slope <= 1 {
+            if slope <= T::N1 {
                 return FilterBandCoefficients {
                     iir1,
                     iir2,
@@ -142,9 +139,14 @@ impl<T: FP> FilterBandCoefficients<T> {
         partial_gain = partial_gain * T::N2;
         let q_value = bw.bw_to_q(f0, fs);
         let q_offset = q_value * T::FRAC_1_SQRT_2(); //butterworth Q
-        let iir2_cascade_count = ((u_slope as usize - start_pole) / 2usize) as usize;
-        for i in 0..iir2_cascade_count {
-            let q_value: T = butterworth_cascade_q(u_slope as u8, i as u8 + start_pole as u8);
+        let iir2_cascade_count = NumCast::from((slope - odd_order) / T::N2).unwrap();
+        let odd_order_usize: usize = NumCast::from(odd_order).unwrap();
+        let slope_usize: usize = NumCast::from(slope).unwrap();
+        assert!(slope_usize < T::BUTTERWORTH.len());
+        assert!(odd_order_usize < T::BUTTERWORTH[0].len());
+        for i in 0usize..iir2_cascade_count {
+            //let q_value: T = butterworth_cascade_q(slope_usize, i + odd_order_usize);
+            let q_value = T::BUTTERWORTH[slope_usize][i + odd_order_usize];
             iir2[i] = (iir2_func)(f0, q_value * q_offset, partial_gain, fs);
         }
         FilterBandCoefficients {
