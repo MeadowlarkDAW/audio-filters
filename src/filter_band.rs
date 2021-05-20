@@ -32,12 +32,14 @@ impl<T: FP> FilterBandCoefficients<T> {
         //Use y.norm() for amplitude and y.arg().to_degrees() for phase. Add to combine phase.
         if self.iir1_enabled {
             let mut y = self.iir1.get_bode_sample(z.z);
+            assert!(self.iir2.len() >= self.iir2_cascade_count);
             for i in 0..self.iir2_cascade_count {
                 y = y * self.iir2[i].get_bode_sample(z);
             }
             y
         } else {
             let mut y = self.iir2[0].get_bode_sample(z);
+            assert!(self.iir2.len() >= self.iir2_cascade_count);
             for i in 1..self.iir2_cascade_count {
                 y = y * self.iir2[i].get_bode_sample(z);
             }

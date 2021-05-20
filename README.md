@@ -33,7 +33,7 @@ The overall design is in progress, there can be frequent (usually minor) breakin
 - [x] 1st and 2nd order filter primitives
 - [x] Higher orders via cascading
 - [x] Virtual analog (VA) State Variable Filters (SVF) for both 1st & 2nd order IIR.
-- [ ] Linkwitz-Riley filters
+- [x] Linkwitz-Riley filters
 - [ ] Elliptic filters
 - [ ] Phase aligned crossovers
 - [ ] Decramping near nyquist

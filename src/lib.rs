@@ -5,6 +5,9 @@ pub mod const_butterworth;
 pub mod units;
 pub mod wide_consts;
 
+pub mod linkwitz_riley;
+pub mod linkwitz_riley_wide;
+
 pub mod filter_band;
 pub mod first_order_iir;
 pub mod second_order_iir;
