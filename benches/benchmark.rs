@@ -19,6 +19,51 @@ fn rand64(x: f64) -> f64 {
     ((x * 12.98986578567).sin() * 43758.54535678567).fract()
 }
 
+fn dynamic_filter_benchmark_1(input_samples: &Vec<f32>, output_samples: &mut Vec<f32>, order: f32) {
+    let fs = 48000.0;
+
+    let mut filter1 = FilterBand::from(&FilterBandCoefficients::highpass(100.0, 1.0, order, fs));
+    let mut filter2 = FilterBand::from(&FilterBandCoefficients::lowpass(5000.0, 1.0, order, fs));
+    let mut filter3 = FilterBand::from(&FilterBandCoefficients::highshelf(
+        2000.0, 6.0, 1.0, order, fs,
+    ));
+    let mut filter4 = FilterBand::from(&FilterBandCoefficients::bell(3000.0, -6.0, 1.0, fs));
+
+    for (i, (input, output)) in input_samples
+        .iter()
+        .zip(output_samples.iter_mut())
+        .enumerate()
+    {
+        let mut sample = *input;
+        sample = (filter1.process)(&mut filter1, sample);
+        sample = (filter2.process)(&mut filter2, sample);
+        sample = (filter3.process)(&mut filter3, sample);
+        sample = (filter4.process)(&mut filter4, sample);
+        *output = sample;
+        let n = (i as f32).sin();
+        filter1.update(&FilterBandCoefficients::highpass(
+            n * 100.0 + 100.0,
+            1.0,
+            order,
+            fs,
+        ));
+        filter2.update(&FilterBandCoefficients::lowpass(
+            n * 100.0 + 2000.0,
+            1.0,
+            order,
+            fs,
+        ));
+        filter3.update(&FilterBandCoefficients::highshelf(
+            n * 100.0 + 1000.0,
+            n,
+            1.0,
+            order,
+            fs,
+        ));
+        filter4.update(&FilterBandCoefficients::bell(n * 100.0 + 500.0, n, 1.0, fs));
+    }
+}
+
 fn static_filter_benchmark_1(input_samples: &Vec<f32>, output_samples: &mut Vec<f32>, order: f32) {
     let fs = 48000.0;
 
@@ -45,6 +90,19 @@ fn test_static_filter_benchmark_1(b: &mut Bencher) {
     let mut output_samples: Vec<f32> = (0..1000000).map(|_| 0.0).collect();
     b.iter(|| {
         test::black_box(static_filter_benchmark_1(
+            &input_samples,
+            &mut output_samples,
+            9.0,
+        ));
+    });
+}
+
+#[bench]
+fn test_dynamic_filter_benchmark_1(b: &mut Bencher) {
+    let input_samples: Vec<f32> = (0..100000).map(|x| rand(x as f32)).collect();
+    let mut output_samples: Vec<f32> = (0..100000).map(|_| 0.0).collect();
+    b.iter(|| {
+        test::black_box(dynamic_filter_benchmark_1(
             &input_samples,
             &mut output_samples,
             9.0,
