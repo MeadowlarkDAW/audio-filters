@@ -1,34 +1,29 @@
 use crate::{
     filter_band::{FilterBandCoefficients, ProcessType},
-    first_order_iir_wide::{
-        WideF32IIR1, WideF32IIR1Coefficients, WideF64IIR1, WideF64IIR1Coefficients,
-    },
-    second_order_iir_wide::{
-        WideF32IIR2, WideF32IIR2Coefficients, WideF64IIR2, WideF64IIR2Coefficients,
-    },
+    first_order_iir_wide::{WideIIR1, WideIIR1Coefficients},
+    second_order_iir_wide::{WideIIR2, WideIIR2Coefficients},
     units::FP,
+    wide_units::WIDE,
     MAX_POLE_COUNT,
 };
-use wide::f32x8;
-use wide::f64x4;
 
 #[derive(Copy, Clone, Debug)]
-pub struct WideF64FilterBandCoefficients {
-    pub iir1: WideF64IIR1Coefficients,
-    pub iir2: [WideF64IIR2Coefficients; MAX_POLE_COUNT],
+pub struct WideFilterBandCoefficients<T: WIDE> {
+    pub iir1: WideIIR1Coefficients<T>,
+    pub iir2: [WideIIR2Coefficients<T>; MAX_POLE_COUNT],
     pub process: ProcessType,
     pub iir2_cascade_count: usize,
     pub iir1_enabled: bool,
 }
 
-impl WideF64FilterBandCoefficients {
-    pub fn from<T: FP>(coeffs: FilterBandCoefficients<T>) -> WideF64FilterBandCoefficients {
-        let mut iir2_cascade = WideF64IIR2Coefficients::empty_cascade();
+impl<T: WIDE> WideFilterBandCoefficients<T> {
+    pub fn from<A: FP>(coeffs: FilterBandCoefficients<A>) -> WideFilterBandCoefficients<T> {
+        let mut iir2_cascade = WideIIR2Coefficients::empty_cascade();
         for (iir2, in_iir2) in iir2_cascade.iter_mut().zip(&coeffs.iir2) {
-            *iir2 = WideF64IIR2Coefficients::from(*in_iir2);
+            *iir2 = WideIIR2Coefficients::from(*in_iir2);
         }
-        WideF64FilterBandCoefficients {
-            iir1: WideF64IIR1Coefficients::from(coeffs.iir1),
+        WideFilterBandCoefficients {
+            iir1: WideIIR1Coefficients::from(coeffs.iir1),
             iir2: iir2_cascade,
             process: coeffs.process,
             iir2_cascade_count: coeffs.iir2_cascade_count,
@@ -38,32 +33,32 @@ impl WideF64FilterBandCoefficients {
 }
 
 #[derive(Copy, Clone)]
-pub struct WideF64FilterBand {
-    iir1: WideF64IIR1,
-    iir2: [WideF64IIR2; MAX_POLE_COUNT],
+pub struct WideFilterBand<T: WIDE> {
+    iir1: WideIIR1<T>,
+    iir2: [WideIIR2<T>; MAX_POLE_COUNT],
     iir2_cascade_count: usize,
-    pub process: fn(&mut Self, f64x4) -> f64x4,
+    pub process: fn(&mut Self, T) -> T,
 }
 
-impl WideF64FilterBand {
-    pub fn from(coeffs: &WideF64FilterBandCoefficients) -> WideF64FilterBand {
-        WideF64FilterBand {
-            iir1: WideF64IIR1::new(coeffs.iir1),
-            iir2: [WideF64IIR2::new(coeffs.iir2[0]); MAX_POLE_COUNT],
+impl<T: WIDE> WideFilterBand<T> {
+    pub fn from(coeffs: &WideFilterBandCoefficients<T>) -> WideFilterBand<T> {
+        WideFilterBand {
+            iir1: WideIIR1::new(coeffs.iir1),
+            iir2: [WideIIR2::new(coeffs.iir2[0]); MAX_POLE_COUNT],
             iir2_cascade_count: coeffs.iir2_cascade_count,
-            process: WideF64FilterBand::get_process(coeffs.process),
+            process: WideFilterBand::get_process(coeffs.process),
         }
     }
 
-    pub fn process_iir1_only(&mut self, x: f64x4) -> f64x4 {
+    pub fn process_iir1_only(&mut self, x: T) -> T {
         self.iir1.process(x)
     }
 
-    pub fn process_iir2_only(&mut self, x: f64x4) -> f64x4 {
+    pub fn process_iir2_only(&mut self, x: T) -> T {
         self.iir2[0].process(x)
     }
 
-    pub fn process_even_order_cascade(&mut self, x: f64x4) -> f64x4 {
+    pub fn process_even_order_cascade(&mut self, x: T) -> T {
         assert!(self.iir2.len() >= self.iir2_cascade_count);
         let mut x = x;
         for i in 0..self.iir2_cascade_count {
@@ -72,7 +67,7 @@ impl WideF64FilterBand {
         x
     }
 
-    pub fn process_odd_order_cascade(&mut self, x: f64x4) -> f64x4 {
+    pub fn process_odd_order_cascade(&mut self, x: T) -> T {
         assert!(self.iir2.len() >= self.iir2_cascade_count);
         let mut x = self.iir1.process(x);
         for i in 0..self.iir2_cascade_count {
@@ -81,116 +76,30 @@ impl WideF64FilterBand {
         x
     }
 
-    pub fn get_process(process_type: ProcessType) -> fn(&mut Self, f64x4) -> f64x4 {
+    pub fn get_process(process_type: ProcessType) -> fn(&mut Self, T) -> T {
         match process_type {
-            ProcessType::ProcessIIR1Only => WideF64FilterBand::process_iir1_only,
-            ProcessType::ProcessIIR2Only => WideF64FilterBand::process_iir2_only,
-            ProcessType::ProcessEvenOrderCascade => WideF64FilterBand::process_even_order_cascade,
-            ProcessType::ProcessOddOrderCascade => WideF64FilterBand::process_odd_order_cascade,
+            ProcessType::ProcessIIR1Only => WideFilterBand::process_iir1_only,
+            ProcessType::ProcessIIR2Only => WideFilterBand::process_iir2_only,
+            ProcessType::ProcessEvenOrderCascade => WideFilterBand::process_even_order_cascade,
+            ProcessType::ProcessOddOrderCascade => WideFilterBand::process_odd_order_cascade,
         }
     }
 
-    pub fn update(&mut self, coeffs: &WideF64FilterBandCoefficients) {
+    pub fn update(&mut self, coeffs: &WideFilterBandCoefficients<T>) {
         for (filter, coeff) in self.iir2.iter_mut().zip(coeffs.iir2.iter()) {
             filter.update_coefficients(*coeff)
         }
         self.iir1.update_coefficients(coeffs.iir1);
         self.iir2_cascade_count = coeffs.iir2_cascade_count;
-        self.process = WideF64FilterBand::get_process(coeffs.process);
-    }
-}
-
-//Copy of WideF64 (x4) just replacing with F32 (x8)
-#[derive(Copy, Clone, Debug)]
-pub struct WideF32FilterBandCoefficients {
-    pub iir1: WideF32IIR1Coefficients,
-    pub iir2: [WideF32IIR2Coefficients; MAX_POLE_COUNT],
-    pub process: ProcessType,
-    pub iir2_cascade_count: usize,
-    pub iir1_enabled: bool,
-}
-
-impl WideF32FilterBandCoefficients {
-    pub fn from<T: FP>(coeffs: FilterBandCoefficients<T>) -> WideF32FilterBandCoefficients {
-        let mut iir2_cascade = WideF32IIR2Coefficients::empty_cascade();
-        for (iir2, in_iir2) in iir2_cascade.iter_mut().zip(&coeffs.iir2) {
-            *iir2 = WideF32IIR2Coefficients::from(*in_iir2);
-        }
-        WideF32FilterBandCoefficients {
-            iir1: WideF32IIR1Coefficients::from(coeffs.iir1),
-            iir2: iir2_cascade,
-            process: coeffs.process,
-            iir2_cascade_count: coeffs.iir2_cascade_count,
-            iir1_enabled: coeffs.iir1_enabled,
-        }
-    }
-}
-
-#[derive(Copy, Clone)]
-pub struct WideF32FilterBand {
-    iir1: WideF32IIR1,
-    iir2: [WideF32IIR2; MAX_POLE_COUNT],
-    iir2_cascade_count: usize,
-    pub process: fn(&mut Self, f32x8) -> f32x8,
-}
-
-impl WideF32FilterBand {
-    pub fn from(coeffs: &WideF32FilterBandCoefficients) -> WideF32FilterBand {
-        WideF32FilterBand {
-            iir1: WideF32IIR1::new(coeffs.iir1),
-            iir2: [WideF32IIR2::new(coeffs.iir2[0]); MAX_POLE_COUNT],
-            iir2_cascade_count: coeffs.iir2_cascade_count,
-            process: WideF32FilterBand::get_process(coeffs.process),
-        }
-    }
-
-    pub fn process_iir1_only(&mut self, x: f32x8) -> f32x8 {
-        self.iir1.process(x)
-    }
-
-    pub fn process_iir2_only(&mut self, x: f32x8) -> f32x8 {
-        self.iir2[0].process(x)
-    }
-
-    pub fn process_even_order_cascade(&mut self, x: f32x8) -> f32x8 {
-        assert!(self.iir2.len() >= self.iir2_cascade_count);
-        let mut x = x;
-        for i in 0..self.iir2_cascade_count {
-            x = self.iir2[i].process(x);
-        }
-        x
-    }
-
-    pub fn process_odd_order_cascade(&mut self, x: f32x8) -> f32x8 {
-        assert!(self.iir2.len() >= self.iir2_cascade_count);
-        let mut x = self.iir1.process(x);
-        for i in 0..self.iir2_cascade_count {
-            x = self.iir2[i].process(x);
-        }
-        x
-    }
-
-    pub fn get_process(process_type: ProcessType) -> fn(&mut Self, f32x8) -> f32x8 {
-        match process_type {
-            ProcessType::ProcessIIR1Only => WideF32FilterBand::process_iir1_only,
-            ProcessType::ProcessIIR2Only => WideF32FilterBand::process_iir2_only,
-            ProcessType::ProcessEvenOrderCascade => WideF32FilterBand::process_even_order_cascade,
-            ProcessType::ProcessOddOrderCascade => WideF32FilterBand::process_odd_order_cascade,
-        }
-    }
-
-    pub fn update(&mut self, coeffs: &WideF32FilterBandCoefficients) {
-        for (filter, coeff) in self.iir2.iter_mut().zip(coeffs.iir2.iter()) {
-            filter.update_coefficients(*coeff)
-        }
-        self.iir1.update_coefficients(coeffs.iir1);
-        self.iir2_cascade_count = coeffs.iir2_cascade_count;
-        self.process = WideF32FilterBand::get_process(coeffs.process);
+        self.process = WideFilterBand::get_process(coeffs.process);
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use wide::f32x8;
+    use wide::f64x4;
+
     use super::*;
 
     fn rand64(x: f64) -> f64 {
@@ -198,7 +107,7 @@ mod tests {
     }
 
     #[test]
-    fn test_widef64_filter_band() {
+    fn test_wide_filter_band() {
         let mut ch1: Vec<f64> = (0..1000).map(|x| rand64(x as f64)).collect();
         let mut ch2: Vec<f64> = (1000..2000).map(|x| rand64(x as f64)).collect();
         let mut ch3: Vec<f64> = (2000..3000).map(|x| rand64(x as f64)).collect();
@@ -211,9 +120,9 @@ mod tests {
         let slope = 4.0;
 
         let coeffs = FilterBandCoefficients::highshelf(f0, gain, width, slope, fs);
-        let coeffs = WideF64FilterBandCoefficients::from(coeffs);
+        let coeffs = WideFilterBandCoefficients::from(coeffs);
 
-        let mut filter = WideF64FilterBand::from(&coeffs);
+        let mut filter = WideFilterBand::from(&coeffs);
 
         for i in 0..1000 {
             let output: [f64; 4] =
@@ -249,9 +158,9 @@ mod tests {
         let slope = 4.0;
 
         let coeffs = FilterBandCoefficients::highshelf(f0, gain, width, slope, fs);
-        let coeffs = WideF32FilterBandCoefficients::from(coeffs);
+        let coeffs = WideFilterBandCoefficients::from(coeffs);
 
-        let mut filter = WideF32FilterBand::from(&coeffs);
+        let mut filter = WideFilterBand::from(&coeffs);
 
         for i in 0..1000 {
             let output: [f32; 8] = (filter.process)(

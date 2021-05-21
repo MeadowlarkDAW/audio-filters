@@ -3,7 +3,7 @@
 
 pub mod const_butterworth;
 pub mod units;
-pub mod wide_consts;
+pub mod wide_units;
 
 pub mod linkwitz_riley;
 pub mod linkwitz_riley_wide;

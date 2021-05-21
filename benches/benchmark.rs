@@ -5,10 +5,7 @@ use test::Bencher;
 use wide::{f32x8, f64x4};
 use {
     audio_filters::filter_band::{FilterBand, FilterBandCoefficients},
-    audio_filters::filter_band_wide::{
-        WideF32FilterBand, WideF32FilterBandCoefficients, WideF64FilterBand,
-        WideF64FilterBandCoefficients,
-    },
+    audio_filters::filter_band_wide::{WideFilterBand, WideFilterBandCoefficients},
 };
 
 fn rand(x: f32) -> f32 {
@@ -117,16 +114,16 @@ fn static_filter_benchmark_1_wide32x8(
 ) {
     let fs = 48000.0;
 
-    let mut filter1 = WideF32FilterBand::from(&WideF32FilterBandCoefficients::from(
+    let mut filter1 = WideFilterBand::from(&WideFilterBandCoefficients::from(
         FilterBandCoefficients::highpass(100.0, 1.0, order, fs),
     ));
-    let mut filter2 = WideF32FilterBand::from(&WideF32FilterBandCoefficients::from(
+    let mut filter2 = WideFilterBand::from(&WideFilterBandCoefficients::from(
         FilterBandCoefficients::lowpass(5000.0, 1.0, order, fs),
     ));
-    let mut filter3 = WideF32FilterBand::from(&WideF32FilterBandCoefficients::from(
+    let mut filter3 = WideFilterBand::from(&WideFilterBandCoefficients::from(
         FilterBandCoefficients::highshelf(2000.0, 6.0, 1.0, order, fs),
     ));
-    let mut filter4 = WideF32FilterBand::from(&WideF32FilterBandCoefficients::from(
+    let mut filter4 = WideFilterBand::from(&WideFilterBandCoefficients::from(
         FilterBandCoefficients::bell(3000.0, -6.0, 1.0, fs),
     ));
 
@@ -175,16 +172,16 @@ fn static_filter_benchmark_1_wide64x4(
 ) {
     let fs = 48000.0;
 
-    let mut filter1 = WideF64FilterBand::from(&WideF64FilterBandCoefficients::from(
+    let mut filter1 = WideFilterBand::from(&WideFilterBandCoefficients::from(
         FilterBandCoefficients::highpass(100.0, 1.0, order, fs),
     ));
-    let mut filter2 = WideF64FilterBand::from(&WideF64FilterBandCoefficients::from(
+    let mut filter2 = WideFilterBand::from(&WideFilterBandCoefficients::from(
         FilterBandCoefficients::lowpass(5000.0, 1.0, order, fs),
     ));
-    let mut filter3 = WideF64FilterBand::from(&WideF64FilterBandCoefficients::from(
+    let mut filter3 = WideFilterBand::from(&WideFilterBandCoefficients::from(
         FilterBandCoefficients::highshelf(2000.0, 6.0, 1.0, order, fs),
     ));
-    let mut filter4 = WideF64FilterBand::from(&WideF64FilterBandCoefficients::from(
+    let mut filter4 = WideFilterBand::from(&WideFilterBandCoefficients::from(
         FilterBandCoefficients::bell(3000.0, -6.0, 1.0, fs),
     ));
 
