@@ -97,17 +97,23 @@ impl<T: WIDE> WideFilterBand<T> {
 
 #[cfg(test)]
 mod tests {
+    use wide::f32x4;
     use wide::f32x8;
+    use wide::f64x2;
     use wide::f64x4;
 
     use super::*;
 
     fn rand64(x: f64) -> f64 {
-        ((x * 12.98983123).sin() * 43758.545345345).fract()
+        ((x * 12.989846024374758).sin() * 43758.545347294991945).fract()
+    }
+
+    fn rand32(x: f32) -> f32 {
+        ((x * 12.989846024374758).sin() * 43758.545347294991945).fract()
     }
 
     #[test]
-    fn test_wide_filter_band() {
+    fn test_widef64x4_filter_band() {
         let mut ch1: Vec<f64> = (0..1000).map(|x| rand64(x as f64)).collect();
         let mut ch2: Vec<f64> = (1000..2000).map(|x| rand64(x as f64)).collect();
         let mut ch3: Vec<f64> = (2000..3000).map(|x| rand64(x as f64)).collect();
@@ -133,15 +139,48 @@ mod tests {
             ch4[i] = output[3];
         }
 
-        println!("{} {} {} {}", ch1[500], ch2[500], ch3[500], ch4[500])
-    }
-
-    fn rand32(x: f32) -> f32 {
-        ((x * 12.9898).sin() * 43758.5453).fract()
+        assert_eq!(
+            [
+                -1.8667512705219382,
+                2.0001785972507573,
+                1.2690387167880355,
+                -1.4693735156714782
+            ],
+            [ch1[500], ch2[500], ch3[500], ch4[500]]
+        );
     }
 
     #[test]
-    fn test_widef32_filter_band() {
+    fn test_widef64x2_filter_band() {
+        let mut ch1: Vec<f64> = (0..1000).map(|x| rand64(x as f64)).collect();
+        let mut ch2: Vec<f64> = (1000..2000).map(|x| rand64(x as f64)).collect();
+
+        let fs = 48000.0;
+        let f0 = 1000.0;
+        let gain = 6.0;
+        let width = 1.0;
+        let slope = 4.0;
+
+        let coeffs = FilterBandCoefficients::highshelf(f0, gain, width, slope, fs);
+        let coeffs = WideFilterBandCoefficients::from(coeffs);
+
+        let mut filter = WideFilterBand::from(&coeffs);
+
+        for i in 0..1000 {
+            let output: [f64; 2] =
+                (filter.process)(&mut filter, f64x2::from([ch1[i], ch2[i]])).into();
+            ch1[i] = output[0];
+            ch2[i] = output[1];
+        }
+
+        assert_eq!(
+            [-1.8667512705219382, 2.0001785972507573],
+            [ch1[500], ch2[500]]
+        );
+    }
+
+    #[test]
+    fn test_widef32x8_filter_band() {
         let mut ch1: Vec<f32> = (0..1000).map(|x| rand32(x as f32)).collect();
         let mut ch2: Vec<f32> = (1000..2000).map(|x| rand32(x as f32)).collect();
         let mut ch3: Vec<f32> = (2000..3000).map(|x| rand32(x as f32)).collect();
@@ -180,9 +219,51 @@ mod tests {
             ch8[i] = output[7];
         }
 
-        println!(
-            "{} {} {} {} {} {} {} {}",
-            ch1[500], ch2[500], ch3[500], ch4[500], ch5[500], ch6[500], ch7[500], ch8[500]
-        )
+        assert_eq!(
+            [
+                -0.84111476,
+                1.4498048,
+                0.048668005,
+                -1.60332,
+                0.6705888,
+                -0.72239006,
+                1.1677216,
+                1.436455
+            ],
+            [ch1[500], ch2[500], ch3[500], ch4[500], ch5[500], ch6[500], ch7[500], ch8[500]]
+        );
+    }
+
+    #[test]
+    fn test_widef32x4_filter_band() {
+        let mut ch1: Vec<f32> = (0..1000).map(|x| rand32(x as f32)).collect();
+        let mut ch2: Vec<f32> = (1000..2000).map(|x| rand32(x as f32)).collect();
+        let mut ch3: Vec<f32> = (2000..3000).map(|x| rand32(x as f32)).collect();
+        let mut ch4: Vec<f32> = (3000..4000).map(|x| rand32(x as f32)).collect();
+
+        let fs = 48000.0;
+        let f0 = 1000.0;
+        let gain = 6.0;
+        let width = 1.0;
+        let slope = 4.0;
+
+        let coeffs = FilterBandCoefficients::highshelf(f0, gain, width, slope, fs);
+        let coeffs = WideFilterBandCoefficients::from(coeffs);
+
+        let mut filter = WideFilterBand::from(&coeffs);
+
+        for i in 0..1000 {
+            let output: [f32; 4] =
+                (filter.process)(&mut filter, f32x4::from([ch1[i], ch2[i], ch3[i], ch4[i]])).into();
+            ch1[i] = output[0];
+            ch2[i] = output[1];
+            ch3[i] = output[2];
+            ch4[i] = output[3];
+        }
+
+        assert_eq!(
+            [-0.84111476, 1.4498048, 0.048668005, -1.60332],
+            [ch1[500], ch2[500], ch3[500], ch4[500]]
+        );
     }
 }

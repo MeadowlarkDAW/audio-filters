@@ -21,8 +21,8 @@ pub trait FP:
     + Mul<Complex<Self>, Output = Complex<Self>>
     + Sub<Complex<Self>, Output = Complex<Self>>
 {
-    const N00_5: Self;
     const N0: Self;
+    const N00_5: Self;
     const N0_5: Self;
     const N1: Self;
     const N2: Self;
@@ -40,8 +40,8 @@ pub trait FP:
 }
 
 impl FP for f32 {
-    const N00_5: f32 = 0.05;
     const N0: f32 = 0.0;
+    const N00_5: f32 = 0.05;
     const N0_5: f32 = 0.5;
     const N1: f32 = 1.0;
     const N2: f32 = 2.0;
