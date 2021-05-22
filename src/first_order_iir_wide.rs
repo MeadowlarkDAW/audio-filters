@@ -66,7 +66,7 @@ impl<T: WIDE> WideIIR1<T> {
 
 #[cfg(test)]
 mod tests {
-    use wide::f64x4;
+    use wide::{f64x2, f64x4};
 
     use super::*;
 
@@ -99,5 +99,34 @@ mod tests {
             ch4[i] = output[3];
         }
         println!("{} {} {} {}", ch1[500], ch2[500], ch3[500], ch4[500])
+    }
+
+    #[test]
+    fn wide_test_seperate_filters() {
+        let mut ch1: Vec<f64> = (0..1000).map(|x| rand(x as f64)).collect();
+        let mut ch2: Vec<f64> = (1000..2000).map(|x| rand(x as f64)).collect();
+
+        let fs = 48000.0;
+
+        let c1 = IIR1Coefficients::lowpass(1000.0, 0.0, fs);
+        let c2 = IIR1Coefficients::highshelf(200.0, 5.0, fs);
+
+        let coeffs = WideIIR1Coefficients {
+            a: f64x2::from([c1.a, c2.a]),
+            g: f64x2::from([c1.g, c2.g]),
+            a1: f64x2::from([c1.a1, c2.a1]),
+            m0: f64x2::from([c1.m0, c2.m0]),
+            m1: f64x2::from([c1.m1, c2.m1]),
+            fs: f64x2::from([c1.fs, c2.fs]),
+        };
+
+        let mut filter_left = WideIIR1::new(coeffs);
+
+        for i in 0..1000 {
+            let output: [f64; 2] = filter_left.process(f64x2::from([ch1[i], ch2[i]])).into();
+            ch1[i] = output[0];
+            ch2[i] = output[1];
+        }
+        println!("{} {}", ch1[500], ch2[500])
     }
 }
