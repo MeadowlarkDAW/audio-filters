@@ -116,7 +116,6 @@ impl<T: FP> Units<T> for T {
 
 #[derive(Copy, Clone, Debug)]
 pub struct ZSample<T> {
-    pub z: Complex<T>,
     pub pow1: Complex<T>,
     pub pow2: Complex<T>,
 }
@@ -127,7 +126,6 @@ impl<T: FP> ZSample<T> {
         let z: Complex<T> =
             Into::<T>::into(z.cos()) + Into::<T>::into(z.sin()) * Complex::<T>::new(T::N0, T::N1);
         ZSample {
-            z,
             pow1: z,
             pow2: z * z,
         }

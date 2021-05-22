@@ -31,7 +31,7 @@ impl<T: FP> FilterBandCoefficients<T> {
     pub fn get_bode_sample(&self, z: ZSample<T>) -> Complex<T> {
         //Use y.norm() for amplitude and y.arg().to_degrees() for phase. Add to combine phase.
         if self.iir1_enabled {
-            let mut y = self.iir1.get_bode_sample(z.z);
+            let mut y = self.iir1.get_bode_sample(z.pow1);
             assert!(self.iir2.len() >= self.iir2_cascade_count);
             for i in 0..self.iir2_cascade_count {
                 y = y * self.iir2[i].get_bode_sample(z);
@@ -113,8 +113,8 @@ impl<T: FP> FilterBandCoefficients<T> {
         slope: T,
         gain: T,
         fs: T,
-        iir1_func: fn(T, T, T) -> IIR1Coefficients<T>,
-        iir2_func: fn(T, T, T, T) -> IIR2Coefficients<T>,
+        iir1_coeff_func: fn(T, T, T) -> IIR1Coefficients<T>,
+        iir2_coeff_func: fn(T, T, T, T) -> IIR2Coefficients<T>,
     ) -> FilterBandCoefficients<T> {
         let slope = slope.floor();
         let odd_order = slope % T::N2;
@@ -124,7 +124,7 @@ impl<T: FP> FilterBandCoefficients<T> {
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
         let mut process = ProcessType::ProcessIIR1Only;
         if iir1_enabled {
-            iir1 = (iir1_func)(f0, partial_gain, fs);
+            iir1 = (iir1_coeff_func)(f0, partial_gain, fs);
             if slope <= T::N1 {
                 return FilterBandCoefficients {
                     iir1,
@@ -149,7 +149,7 @@ impl<T: FP> FilterBandCoefficients<T> {
         for i in 0usize..iir2_cascade_count {
             //let q_value: T = butterworth_cascade_q(slope_usize, i + odd_order_usize);
             let q_value = T::BUTTERWORTH[slope_usize][i + odd_order_usize];
-            iir2[i] = (iir2_func)(f0, q_value * q_offset, partial_gain, fs);
+            iir2[i] = (iir2_coeff_func)(f0, partial_gain, q_value * q_offset, fs);
         }
         FilterBandCoefficients {
             iir1,
@@ -162,7 +162,7 @@ impl<T: FP> FilterBandCoefficients<T> {
 
     pub fn notch(f0: T, _gain: T, bw: T, fs: T) -> FilterBandCoefficients<T> {
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
-        iir2[0] = IIR2Coefficients::notch(f0, bw.bw_to_q(f0, fs), T::N0, fs);
+        iir2[0] = IIR2Coefficients::notch(f0, T::N0, bw.bw_to_q(f0, fs), fs);
         FilterBandCoefficients {
             iir1: IIR1Coefficients::empty(),
             iir2,
@@ -174,7 +174,7 @@ impl<T: FP> FilterBandCoefficients<T> {
 
     pub fn bandpass(f0: T, _gain: T, bw: T, fs: T) -> FilterBandCoefficients<T> {
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
-        iir2[0] = IIR2Coefficients::bandpass(f0, bw.bw_to_q(f0, fs), T::N0, fs);
+        iir2[0] = IIR2Coefficients::bandpass(f0, T::N0, bw.bw_to_q(f0, fs), fs);
         FilterBandCoefficients {
             iir1: IIR1Coefficients::empty(),
             iir2,
@@ -186,7 +186,7 @@ impl<T: FP> FilterBandCoefficients<T> {
 
     pub fn bell(f0: T, gain: T, bw: T, fs: T) -> FilterBandCoefficients<T> {
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
-        iir2[0] = IIR2Coefficients::bell(f0, bw.bw_to_q(f0, fs), gain, fs);
+        iir2[0] = IIR2Coefficients::bell(f0, gain, bw.bw_to_q(f0, fs), fs);
         FilterBandCoefficients {
             iir1: IIR1Coefficients::empty(),
             iir2,
