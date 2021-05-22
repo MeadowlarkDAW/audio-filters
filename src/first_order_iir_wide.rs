@@ -51,6 +51,14 @@ impl<T: WIDE> WideIIR1<T> {
         self.coeffs.m0 * input + self.coeffs.m1 * v2
     }
 
+    pub fn process_partial(&mut self, input: T) -> T {
+        let v1 = self.coeffs.a1 * (input - self.ic1eq);
+        let v2 = v1 + self.ic1eq;
+        self.ic1eq = v2 + v1;
+
+        v2
+    }
+
     pub fn update_coefficients(&mut self, new_coefficients: WideIIR1Coefficients<T>) {
         self.coeffs = new_coefficients;
     }

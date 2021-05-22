@@ -91,6 +91,16 @@ impl<T: WIDE> WideIIR2<T> {
         self.coeffs.m0 * input + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
     }
 
+    pub fn process_partial(&mut self, input: T) -> (T, T) {
+        let v3 = input - self.ic2eq;
+        let v1 = self.coeffs.a1 * self.ic1eq + self.coeffs.a2 * v3;
+        let v2 = self.ic2eq + self.coeffs.a2 * self.ic1eq + self.coeffs.a3 * v3;
+        self.ic1eq = T::N2 * v1 - self.ic1eq;
+        self.ic2eq = T::N2 * v2 - self.ic2eq;
+
+        (v1, v2)
+    }
+
     pub fn update_coefficients(&mut self, new_coefficients: WideIIR2Coefficients<T>) {
         self.coeffs = new_coefficients;
     }
