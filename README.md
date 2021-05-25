@@ -41,13 +41,13 @@ The overall design is in progress, there can be frequent (usually minor) breakin
 - [ ] Linear Phase Mode
 
 ```rust
-let fs = 48000.0;
-let f0 = 1000.0;
-let gain = 6.0;
-let width = 1.0;
-let slope = 4.0;
+let sample_rate_hz = 48000.0;
+let cutoff_hz = 1000.0;
+let gain_db = 6.0;
+let width_oct = 1.0;
+let order = 4.0;
 
-let coeffs = FilterBandCoefficients::highshelf(f0, gain, width, slope, fs);
+let coeffs = FilterBandCoefficients::highshelf(cutoff_hz, gain_db, width_oct, order, sample_rate_hz);
 
 let mut filter_left = FilterBand::from(&coeffs);
 let mut filter_right = FilterBand::from(&coeffs);
