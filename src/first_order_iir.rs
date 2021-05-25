@@ -2,11 +2,6 @@ use num_complex::Complex;
 
 use crate::units::FP;
 
-pub fn get_z<T: FP>(f_hz: T, fs: T) -> Complex<T> {
-    let z = -T::TAU() * f_hz / fs;
-    z.cos() + z.sin() * Complex::<T>::new(T::N0, T::N1)
-}
-
 #[derive(Copy, Clone, Debug)]
 pub struct IIR1Coefficients<T: FP> {
     pub a: T,
@@ -38,50 +33,50 @@ impl<T: FP> IIR1Coefficients<T> {
         }
     }
 
-    pub fn lowpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * T::N0_5);
+    pub fn lowpass(cutoff_hz: T, _gain_db: T, sample_rate_hz: T) -> IIR1Coefficients<T> {
+        let cutoff_hz = cutoff_hz.min(sample_rate_hz * T::N0_5);
         let a = T::N1;
-        let g = (T::PI() * f0 / fs).tan();
+        let g = (T::PI() * cutoff_hz / sample_rate_hz).tan();
         let a1 = g / (T::N1 + g);
         let m0 = T::N0;
         let m1 = T::N1;
         IIR1Coefficients { a, g, a1, m0, m1 }
     }
 
-    pub fn highpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * T::N0_5);
+    pub fn highpass(cutoff_hz: T, _gain_db: T, sample_rate_hz: T) -> IIR1Coefficients<T> {
+        let cutoff_hz = cutoff_hz.min(sample_rate_hz * T::N0_5);
         let a = T::N1;
-        let g = (T::PI() * f0 / fs).tan();
+        let g = (T::PI() * cutoff_hz / sample_rate_hz).tan();
         let a1 = g / (T::N1 + g);
         let m0 = T::N1;
         let m1 = -T::N1;
         IIR1Coefficients { a, g, a1, m0, m1 }
     }
 
-    pub fn allpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * T::N0_5);
+    pub fn allpass(cutoff_hz: T, _gain_db: T, sample_rate_hz: T) -> IIR1Coefficients<T> {
+        let cutoff_hz = cutoff_hz.min(sample_rate_hz * T::N0_5);
         let a = T::N1;
-        let g = (T::PI() * f0 / fs).tan();
+        let g = (T::PI() * cutoff_hz / sample_rate_hz).tan();
         let a1 = g / (T::N1 + g);
         let m0 = T::N1;
         let m1 = -T::N2;
         IIR1Coefficients { a, g, a1, m0, m1 }
     }
 
-    pub fn lowshelf(f0: T, db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * T::N0_5);
-        let a = T::N10.powf(db_gain / T::N20);
-        let g = (T::PI() * f0 / fs).tan() / (a).sqrt();
+    pub fn lowshelf(cutoff_hz: T, gain_db: T, sample_rate_hz: T) -> IIR1Coefficients<T> {
+        let cutoff_hz = cutoff_hz.min(sample_rate_hz * T::N0_5);
+        let a = T::N10.powf(gain_db / T::N20);
+        let g = (T::PI() * cutoff_hz / sample_rate_hz).tan() / (a).sqrt();
         let a1 = g / (T::N1 + g);
         let m0 = T::N1;
         let m1 = a - T::N1;
         IIR1Coefficients { a, g, a1, m0, m1 }
     }
 
-    pub fn highshelf(f0: T, db_gain: T, fs: T) -> IIR1Coefficients<T> {
-        let f0 = f0.min(fs * T::N0_5);
-        let a = T::N10.powf(db_gain / T::N20);
-        let g = (T::PI() * f0 / fs).tan() * (a).sqrt();
+    pub fn highshelf(cutoff_hz: T, gain_db: T, sample_rate_hz: T) -> IIR1Coefficients<T> {
+        let cutoff_hz = cutoff_hz.min(sample_rate_hz * T::N0_5);
+        let a = T::N10.powf(gain_db / T::N20);
+        let g = (T::PI() * cutoff_hz / sample_rate_hz).tan() * (a).sqrt();
         let a1 = g / (T::N1 + g);
         let m0 = a;
         let m1 = T::N1 - a;
@@ -105,16 +100,16 @@ impl<T: FP> IIR1<T> {
         }
     }
 
-    pub fn process(&mut self, input: T) -> T {
-        let v1 = self.coeffs.a1 * (input - self.ic1eq);
+    pub fn process(&mut self, input_sample: T) -> T {
+        let v1 = self.coeffs.a1 * (input_sample - self.ic1eq);
         let v2 = v1 + self.ic1eq;
         self.ic1eq = v2 + v1;
 
-        self.coeffs.m0 * input + self.coeffs.m1 * v2
+        self.coeffs.m0 * input_sample + self.coeffs.m1 * v2
     }
 
-    pub fn process_partial(&mut self, input: T) -> T {
-        let v1 = self.coeffs.a1 * (input - self.ic1eq);
+    pub fn process_partial(&mut self, input_sample: T) -> T {
+        let v1 = self.coeffs.a1 * (input_sample - self.ic1eq);
         let v2 = v1 + self.ic1eq;
         self.ic1eq = v2 + v1;
 

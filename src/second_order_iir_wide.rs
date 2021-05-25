@@ -77,18 +77,18 @@ impl<T: WIDE> WideIIR2<T> {
         }
     }
 
-    pub fn process(&mut self, input: T) -> T {
-        let v3 = input - self.ic2eq;
+    pub fn process(&mut self, input_sample: T) -> T {
+        let v3 = input_sample - self.ic2eq;
         let v1 = self.coeffs.a1 * self.ic1eq + self.coeffs.a2 * v3;
         let v2 = self.ic2eq + self.coeffs.a2 * self.ic1eq + self.coeffs.a3 * v3;
         self.ic1eq = T::N2 * v1 - self.ic1eq;
         self.ic2eq = T::N2 * v2 - self.ic2eq;
 
-        self.coeffs.m0 * input + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
+        self.coeffs.m0 * input_sample + self.coeffs.m1 * v1 + self.coeffs.m2 * v2
     }
 
-    pub fn process_partial(&mut self, input: T) -> (T, T) {
-        let v3 = input - self.ic2eq;
+    pub fn process_partial(&mut self, input_sample: T) -> (T, T) {
+        let v3 = input_sample - self.ic2eq;
         let v1 = self.coeffs.a1 * self.ic1eq + self.coeffs.a2 * v3;
         let v2 = self.ic2eq + self.coeffs.a2 * self.ic1eq + self.coeffs.a3 * v3;
         self.ic1eq = T::N2 * v1 - self.ic1eq;
@@ -126,7 +126,7 @@ mod tests {
         let f0 = 1000.0;
         let bandwidth = 1.0;
 
-        let coeffs = IIR2Coefficients::lowpass(f0, bandwidth.bw_to_q(f0, fs), 0.0, fs);
+        let coeffs = IIR2Coefficients::lowpass(f0, bandwidth.bandwidth_to_q(f0, fs), 0.0, fs);
         let coeffs = WideIIR2Coefficients::from(coeffs);
 
         let mut filter_left = WideIIR2::new(coeffs);

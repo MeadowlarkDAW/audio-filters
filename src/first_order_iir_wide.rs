@@ -34,16 +34,16 @@ impl<T: WIDE> WideIIR1<T> {
         }
     }
 
-    pub fn process(&mut self, input: T) -> T {
-        let v1 = self.coeffs.a1 * (input - self.ic1eq);
+    pub fn process(&mut self, input_sample: T) -> T {
+        let v1 = self.coeffs.a1 * (input_sample - self.ic1eq);
         let v2 = v1 + self.ic1eq;
         self.ic1eq = v2 + v1;
 
-        self.coeffs.m0 * input + self.coeffs.m1 * v2
+        self.coeffs.m0 * input_sample + self.coeffs.m1 * v2
     }
 
-    pub fn process_partial(&mut self, input: T) -> T {
-        let v1 = self.coeffs.a1 * (input - self.ic1eq);
+    pub fn process_partial(&mut self, input_sample: T) -> T {
+        let v1 = self.coeffs.a1 * (input_sample - self.ic1eq);
         let v2 = v1 + self.ic1eq;
         self.ic1eq = v2 + v1;
 

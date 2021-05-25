@@ -85,7 +85,7 @@ pub trait Units<T> {
     fn db_to_lin(self) -> T;
     fn lin_to_db(self) -> T;
     fn sign(self, b: T) -> T;
-    fn bw_to_q(self, f0: T, fs: T) -> T;
+    fn bandwidth_to_q(self, f0: T, fs: T) -> T;
 }
 
 impl<T: FP> Units<T> for T {
@@ -108,7 +108,7 @@ impl<T: FP> Units<T> for T {
             self
         }
     }
-    fn bw_to_q(self, _f0: T, _fs: T) -> T {
+    fn bandwidth_to_q(self, _f0: T, _fs: T) -> T {
         let two = T::N2;
         T::N1 / (two * (T::LN_2() / two * self).sinh())
     }
@@ -121,8 +121,8 @@ pub struct ZSample<T> {
 }
 
 impl<T: FP> ZSample<T> {
-    pub fn new(f_hz: T, fs: T) -> ZSample<T> {
-        let z = -T::TAU() * f_hz / fs;
+    pub fn new(frequency_hz: T, sample_rate_hz: T) -> ZSample<T> {
+        let z = -T::TAU() * frequency_hz / sample_rate_hz;
         let z: Complex<T> =
             Into::<T>::into(z.cos()) + Into::<T>::into(z.sin()) * Complex::<T>::new(T::N0, T::N1);
         ZSample {

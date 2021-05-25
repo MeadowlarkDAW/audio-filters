@@ -50,30 +50,30 @@ impl<T: WIDE> WideFilterBand<T> {
         }
     }
 
-    pub fn process_iir1_only(&mut self, x: T) -> T {
-        self.iir1.process(x)
+    pub fn process_iir1_only(&mut self, input_sample: T) -> T {
+        self.iir1.process(input_sample)
     }
 
-    pub fn process_iir2_only(&mut self, x: T) -> T {
-        self.iir2[0].process(x)
+    pub fn process_iir2_only(&mut self, input_sample: T) -> T {
+        self.iir2[0].process(input_sample)
     }
 
-    pub fn process_even_order_cascade(&mut self, x: T) -> T {
+    pub fn process_even_order_cascade(&mut self, input_sample: T) -> T {
         assert!(self.iir2.len() >= self.iir2_cascade_count);
-        let mut x = x;
+        let mut input_sample = input_sample;
         for i in 0..self.iir2_cascade_count {
-            x = self.iir2[i].process(x);
+            input_sample = self.iir2[i].process(input_sample);
         }
-        x
+        input_sample
     }
 
-    pub fn process_odd_order_cascade(&mut self, x: T) -> T {
+    pub fn process_odd_order_cascade(&mut self, input_sample: T) -> T {
         assert!(self.iir2.len() >= self.iir2_cascade_count);
-        let mut x = self.iir1.process(x);
+        let mut input_sample = self.iir1.process(input_sample);
         for i in 0..self.iir2_cascade_count {
-            x = self.iir2[i].process(x);
+            input_sample = self.iir2[i].process(input_sample);
         }
-        x
+        input_sample
     }
 
     pub fn get_process(process_type: ProcessType) -> fn(&mut Self, T) -> T {

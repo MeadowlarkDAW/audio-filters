@@ -47,85 +47,112 @@ impl<T: FP> FilterBandCoefficients<T> {
         }
     }
 
-    pub fn lowpass(f0: T, bw: T, slope: T, fs: T) -> FilterBandCoefficients<T> {
+    pub fn lowpass(
+        cutoff_hz: T,
+        bandwidth_oct: T,
+        order: T,
+        sample_rate_hz: T,
+    ) -> FilterBandCoefficients<T> {
         FilterBandCoefficients::filter_type_1(
-            f0,
-            bw,
-            slope,
+            cutoff_hz,
+            bandwidth_oct,
+            order,
             T::N0,
-            fs,
+            sample_rate_hz,
             IIR1Coefficients::lowpass,
             IIR2Coefficients::lowpass,
         )
     }
 
-    pub fn highpass(f0: T, bw: T, slope: T, fs: T) -> FilterBandCoefficients<T> {
+    pub fn highpass(
+        cutoff_hz: T,
+        bandwidth_oct: T,
+        order: T,
+        sample_rate_hz: T,
+    ) -> FilterBandCoefficients<T> {
         FilterBandCoefficients::filter_type_1(
-            f0,
-            bw,
-            slope,
+            cutoff_hz,
+            bandwidth_oct,
+            order,
             T::N0,
-            fs,
+            sample_rate_hz,
             IIR1Coefficients::highpass,
             IIR2Coefficients::highpass,
         )
     }
 
-    pub fn allpass(f0: T, bw: T, slope: T, fs: T) -> FilterBandCoefficients<T> {
+    pub fn allpass(
+        cutoff_hz: T,
+        bandwidth_oct: T,
+        order: T,
+        sample_rate_hz: T,
+    ) -> FilterBandCoefficients<T> {
         FilterBandCoefficients::filter_type_1(
-            f0,
-            bw,
-            slope,
+            cutoff_hz,
+            bandwidth_oct,
+            order,
             T::N0,
-            fs,
+            sample_rate_hz,
             IIR1Coefficients::allpass,
             IIR2Coefficients::allpass,
         )
     }
 
-    pub fn lowshelf(f0: T, gain: T, bw: T, slope: T, fs: T) -> FilterBandCoefficients<T> {
+    pub fn lowshelf(
+        cutoff_hz: T,
+        gain_db: T,
+        bandwidth_oct: T,
+        order: T,
+        sample_rate_hz: T,
+    ) -> FilterBandCoefficients<T> {
         FilterBandCoefficients::filter_type_1(
-            f0,
-            bw,
-            slope,
-            gain,
-            fs,
+            cutoff_hz,
+            bandwidth_oct,
+            order,
+            gain_db,
+            sample_rate_hz,
             IIR1Coefficients::lowshelf,
             IIR2Coefficients::lowshelf,
         )
     }
 
-    pub fn highshelf(f0: T, gain: T, bw: T, slope: T, fs: T) -> FilterBandCoefficients<T> {
+    pub fn highshelf(
+        cutoff_hz: T,
+        gain_db: T,
+        bandwidth_oct: T,
+        order: T,
+        sample_rate_hz: T,
+    ) -> FilterBandCoefficients<T> {
         FilterBandCoefficients::filter_type_1(
-            f0,
-            bw,
-            slope,
-            gain,
-            fs,
+            cutoff_hz,
+            bandwidth_oct,
+            order,
+            gain_db,
+            sample_rate_hz,
             IIR1Coefficients::highshelf,
             IIR2Coefficients::highshelf,
         )
     }
 
     pub fn filter_type_1(
-        f0: T,
-        bw: T,
-        slope: T,
-        gain: T,
-        fs: T,
+        cutoff_hz: T,
+        bandwidth_oct: T,
+        order: T,
+        gain_db: T,
+        sample_rate_hz: T,
         iir1_coeff_func: fn(T, T, T) -> IIR1Coefficients<T>,
         iir2_coeff_func: fn(T, T, T, T) -> IIR2Coefficients<T>,
     ) -> FilterBandCoefficients<T> {
-        let slope = slope.floor();
-        let odd_order = slope % T::N2;
+        let order = order.floor();
+        let odd_order = order % T::N2;
         let iir1_enabled = odd_order == T::N1;
-        let mut partial_gain = gain / slope;
+        let mut partial_gain = gain_db / order;
         let mut iir1 = IIR1Coefficients::empty();
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
         let mut process = ProcessType::ProcessIIR1Only;
         if iir1_enabled {
-            iir1 = (iir1_coeff_func)(f0, partial_gain, fs);
-            if slope <= T::N1 {
+            iir1 = (iir1_coeff_func)(cutoff_hz, partial_gain, sample_rate_hz);
+            if order <= T::N1 {
                 return FilterBandCoefficients {
                     iir1,
                     iir2,
@@ -139,17 +166,18 @@ impl<T: FP> FilterBandCoefficients<T> {
             process = ProcessType::ProcessEvenOrderCascade;
         }
         partial_gain = partial_gain * T::N2;
-        let q_value = bw.bw_to_q(f0, fs);
+        let q_value = bandwidth_oct.bandwidth_to_q(cutoff_hz, sample_rate_hz);
         let q_offset = q_value * T::FRAC_1_SQRT_2(); //butterworth Q
-        let iir2_cascade_count = NumCast::from((slope - odd_order) / T::N2).unwrap();
+        let iir2_cascade_count = NumCast::from((order - odd_order) / T::N2).unwrap();
         let odd_order_usize: usize = NumCast::from(odd_order).unwrap();
-        let slope_usize: usize = NumCast::from(slope).unwrap();
-        assert!(slope_usize < T::BUTTERWORTH.len());
+        let order_usize: usize = NumCast::from(order).unwrap();
+        assert!(order_usize < T::BUTTERWORTH.len());
         assert!(odd_order_usize < T::BUTTERWORTH[0].len());
         for i in 0usize..iir2_cascade_count {
-            //let q_value: T = butterworth_cascade_q(slope_usize, i + odd_order_usize);
-            let q_value = T::BUTTERWORTH[slope_usize][i + odd_order_usize];
-            iir2[i] = (iir2_coeff_func)(f0, partial_gain, q_value * q_offset, fs);
+            //let q_value: T = butterworth_cascade_q(order_usize, i + odd_order_usize);
+            let q_value = T::BUTTERWORTH[order_usize][i + odd_order_usize];
+            iir2[i] =
+                (iir2_coeff_func)(cutoff_hz, partial_gain, q_value * q_offset, sample_rate_hz);
         }
         FilterBandCoefficients {
             iir1,
@@ -160,9 +188,19 @@ impl<T: FP> FilterBandCoefficients<T> {
         }
     }
 
-    pub fn notch(f0: T, _gain: T, bw: T, fs: T) -> FilterBandCoefficients<T> {
+    pub fn notch(
+        cutoff_hz: T,
+        _gain_db: T,
+        bandwidth_oct: T,
+        sample_rate_hz: T,
+    ) -> FilterBandCoefficients<T> {
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
-        iir2[0] = IIR2Coefficients::notch(f0, T::N0, bw.bw_to_q(f0, fs), fs);
+        iir2[0] = IIR2Coefficients::notch(
+            cutoff_hz,
+            T::N0,
+            bandwidth_oct.bandwidth_to_q(cutoff_hz, sample_rate_hz),
+            sample_rate_hz,
+        );
         FilterBandCoefficients {
             iir1: IIR1Coefficients::empty(),
             iir2,
@@ -172,9 +210,19 @@ impl<T: FP> FilterBandCoefficients<T> {
         }
     }
 
-    pub fn bandpass(f0: T, _gain: T, bw: T, fs: T) -> FilterBandCoefficients<T> {
+    pub fn bandpass(
+        cutoff_hz: T,
+        _gain_db: T,
+        bandwidth_oct: T,
+        sample_rate_hz: T,
+    ) -> FilterBandCoefficients<T> {
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
-        iir2[0] = IIR2Coefficients::bandpass(f0, T::N0, bw.bw_to_q(f0, fs), fs);
+        iir2[0] = IIR2Coefficients::bandpass(
+            cutoff_hz,
+            T::N0,
+            bandwidth_oct.bandwidth_to_q(cutoff_hz, sample_rate_hz),
+            sample_rate_hz,
+        );
         FilterBandCoefficients {
             iir1: IIR1Coefficients::empty(),
             iir2,
@@ -184,9 +232,19 @@ impl<T: FP> FilterBandCoefficients<T> {
         }
     }
 
-    pub fn bell(f0: T, gain: T, bw: T, fs: T) -> FilterBandCoefficients<T> {
+    pub fn bell(
+        cutoff_hz: T,
+        gain_db: T,
+        bandwidth_oct: T,
+        sample_rate_hz: T,
+    ) -> FilterBandCoefficients<T> {
         let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
-        iir2[0] = IIR2Coefficients::bell(f0, gain, bw.bw_to_q(f0, fs), fs);
+        iir2[0] = IIR2Coefficients::bell(
+            cutoff_hz,
+            gain_db,
+            bandwidth_oct.bandwidth_to_q(cutoff_hz, sample_rate_hz),
+            sample_rate_hz,
+        );
         FilterBandCoefficients {
             iir1: IIR1Coefficients::empty(),
             iir2,
@@ -215,30 +273,30 @@ impl<T: FP> FilterBand<T> {
         }
     }
 
-    pub fn process_iir1_only(&mut self, x: T) -> T {
-        self.iir1.process(x)
+    pub fn process_iir1_only(&mut self, input_sample: T) -> T {
+        self.iir1.process(input_sample)
     }
 
-    pub fn process_iir2_only(&mut self, x: T) -> T {
-        self.iir2[0].process(x)
+    pub fn process_iir2_only(&mut self, input_sample: T) -> T {
+        self.iir2[0].process(input_sample)
     }
 
-    pub fn process_even_order_cascade(&mut self, x: T) -> T {
+    pub fn process_even_order_cascade(&mut self, input_sample: T) -> T {
         assert!(self.iir2.len() >= self.iir2_cascade_count);
-        let mut x = x;
+        let mut input_sample = input_sample;
         for i in 0..self.iir2_cascade_count {
-            x = self.iir2[i].process(x);
+            input_sample = self.iir2[i].process(input_sample);
         }
-        x
+        input_sample
     }
 
-    pub fn process_odd_order_cascade(&mut self, x: T) -> T {
+    pub fn process_odd_order_cascade(&mut self, input_sample: T) -> T {
         assert!(self.iir2.len() >= self.iir2_cascade_count);
-        let mut x = self.iir1.process(x);
+        let mut input_sample = self.iir1.process(input_sample);
         for i in 0..self.iir2_cascade_count {
-            x = self.iir2[i].process(x);
+            input_sample = self.iir2[i].process(input_sample);
         }
-        x
+        input_sample
     }
 
     pub fn get_process(process_type: ProcessType) -> fn(&mut Self, T) -> T {
@@ -274,12 +332,12 @@ mod tests {
         let mut right: Vec<f32> = (0..1000).map(|x| rand(x as f32)).collect();
 
         let fs = 48000.0;
-        let f0 = 1000.0;
+        let cutoff_hz = 1000.0;
         let gain = 6.0;
         let width = 1.0;
-        let slope = 4.0;
+        let order = 4.0;
 
-        let coeffs = FilterBandCoefficients::highshelf(f0, gain, width, slope, fs);
+        let coeffs = FilterBandCoefficients::highshelf(cutoff_hz, gain, width, order, fs);
 
         let mut filter_left = FilterBand::from(&coeffs);
         let mut filter_right = FilterBand::from(&coeffs);

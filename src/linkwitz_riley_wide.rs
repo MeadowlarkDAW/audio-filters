@@ -32,24 +32,24 @@ impl<T: WIDE> WideLinkwitzRileyBand<T> {
         }
     }
 
-    pub fn process_iir1_only(&mut self, x: T) -> T {
+    pub fn process_iir1_only(&mut self, input_sample: T) -> T {
         self.filter2
-            .process_iir1_only(self.filter1.process_iir1_only(x))
+            .process_iir1_only(self.filter1.process_iir1_only(input_sample))
     }
 
-    pub fn process_iir2_only(&mut self, x: T) -> T {
+    pub fn process_iir2_only(&mut self, input_sample: T) -> T {
         self.filter2
-            .process_iir2_only(self.filter1.process_iir2_only(x))
+            .process_iir2_only(self.filter1.process_iir2_only(input_sample))
     }
 
-    pub fn process_even_order_cascade(&mut self, x: T) -> T {
+    pub fn process_even_order_cascade(&mut self, input_sample: T) -> T {
         self.filter2
-            .process_even_order_cascade(self.filter1.process_even_order_cascade(x))
+            .process_even_order_cascade(self.filter1.process_even_order_cascade(input_sample))
     }
 
-    pub fn process_odd_order_cascade(&mut self, x: T) -> T {
+    pub fn process_odd_order_cascade(&mut self, input_sample: T) -> T {
         self.filter2
-            .process_odd_order_cascade(self.filter1.process_odd_order_cascade(x))
+            .process_odd_order_cascade(self.filter1.process_odd_order_cascade(input_sample))
     }
 
     pub fn get_process(process_type: ProcessType) -> fn(&mut Self, T) -> T {
