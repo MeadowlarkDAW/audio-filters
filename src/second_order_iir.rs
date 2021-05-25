@@ -1,6 +1,6 @@
 use num_complex::Complex;
 
-use crate::{units::ZSample, MAX_POLE_COUNT};
+use crate::{units::ZSample, MAX_CASCADE_COUNT};
 
 use crate::units::FP;
 
@@ -50,8 +50,8 @@ impl<T: FP> IIR2Coefficients<T> {
         }
     }
 
-    pub fn empty_cascade() -> [IIR2Coefficients<T>; MAX_POLE_COUNT] {
-        [IIR2Coefficients::empty(); MAX_POLE_COUNT]
+    pub fn empty_cascade() -> [IIR2Coefficients<T>; MAX_CASCADE_COUNT] {
+        [IIR2Coefficients::empty(); MAX_CASCADE_COUNT]
     }
 
     pub fn lowpass(

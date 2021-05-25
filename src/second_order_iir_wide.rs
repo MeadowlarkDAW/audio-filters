@@ -1,4 +1,4 @@
-use crate::{second_order_iir::IIR2Coefficients, units::FP, wide_units::WIDE, MAX_POLE_COUNT};
+use crate::{second_order_iir::IIR2Coefficients, units::FP, wide_units::WIDE, MAX_CASCADE_COUNT};
 
 #[derive(Copy, Clone, Debug)]
 pub struct WideIIR2Coefficients<T: WIDE> {
@@ -54,8 +54,8 @@ impl<T: WIDE> WideIIR2Coefficients<T> {
         }
     }
 
-    pub fn empty_cascade() -> [WideIIR2Coefficients<T>; MAX_POLE_COUNT] {
-        [WideIIR2Coefficients::<T>::empty(); MAX_POLE_COUNT]
+    pub fn empty_cascade() -> [WideIIR2Coefficients<T>; MAX_CASCADE_COUNT] {
+        [WideIIR2Coefficients::<T>::empty(); MAX_CASCADE_COUNT]
     }
 }
 

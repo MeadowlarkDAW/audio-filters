@@ -15,13 +15,13 @@ use crate::{
     first_order_iir::{IIR1Coefficients, IIR1},
     second_order_iir::{IIR2Coefficients, IIR2},
     units::{Units, ZSample},
-    MAX_POLE_COUNT,
+    MAX_CASCADE_COUNT,
 };
 
 #[derive(Copy, Clone, Debug)]
 pub struct FilterBandCoefficients<T: FP> {
     pub iir1: IIR1Coefficients<T>,
-    pub iir2: [IIR2Coefficients<T>; MAX_POLE_COUNT],
+    pub iir2: [IIR2Coefficients<T>; MAX_CASCADE_COUNT],
     pub process: ProcessType,
     pub iir2_cascade_count: usize,
     pub iir1_enabled: bool,
@@ -148,7 +148,7 @@ impl<T: FP> FilterBandCoefficients<T> {
         let iir1_enabled = odd_order == T::N1;
         let mut partial_gain = gain_db / order;
         let mut iir1 = IIR1Coefficients::empty();
-        let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
+        let mut iir2 = [IIR2Coefficients::empty(); MAX_CASCADE_COUNT];
         let mut process = ProcessType::ProcessIIR1Only;
         if iir1_enabled {
             iir1 = (iir1_coeff_func)(cutoff_hz, partial_gain, sample_rate_hz);
@@ -194,7 +194,7 @@ impl<T: FP> FilterBandCoefficients<T> {
         bandwidth_oct: T,
         sample_rate_hz: T,
     ) -> FilterBandCoefficients<T> {
-        let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
+        let mut iir2 = [IIR2Coefficients::empty(); MAX_CASCADE_COUNT];
         iir2[0] = IIR2Coefficients::notch(
             cutoff_hz,
             T::N0,
@@ -216,7 +216,7 @@ impl<T: FP> FilterBandCoefficients<T> {
         bandwidth_oct: T,
         sample_rate_hz: T,
     ) -> FilterBandCoefficients<T> {
-        let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
+        let mut iir2 = [IIR2Coefficients::empty(); MAX_CASCADE_COUNT];
         iir2[0] = IIR2Coefficients::bandpass(
             cutoff_hz,
             T::N0,
@@ -238,7 +238,7 @@ impl<T: FP> FilterBandCoefficients<T> {
         bandwidth_oct: T,
         sample_rate_hz: T,
     ) -> FilterBandCoefficients<T> {
-        let mut iir2 = [IIR2Coefficients::empty(); MAX_POLE_COUNT];
+        let mut iir2 = [IIR2Coefficients::empty(); MAX_CASCADE_COUNT];
         iir2[0] = IIR2Coefficients::bell(
             cutoff_hz,
             gain_db,
@@ -258,7 +258,7 @@ impl<T: FP> FilterBandCoefficients<T> {
 #[derive(Copy, Clone)]
 pub struct FilterBand<T: FP> {
     iir1: IIR1<T>,
-    iir2: [IIR2<T>; MAX_POLE_COUNT],
+    iir2: [IIR2<T>; MAX_CASCADE_COUNT],
     iir2_cascade_count: usize,
     pub process: fn(&mut Self, T) -> T,
 }
@@ -267,7 +267,7 @@ impl<T: FP> FilterBand<T> {
     pub fn from(coeffs: &FilterBandCoefficients<T>) -> FilterBand<T> {
         FilterBand {
             iir1: IIR1::<T>::new(coeffs.iir1),
-            iir2: [IIR2::<T>::new(coeffs.iir2[0]); MAX_POLE_COUNT],
+            iir2: [IIR2::<T>::new(coeffs.iir2[0]); MAX_CASCADE_COUNT],
             iir2_cascade_count: coeffs.iir2_cascade_count,
             process: FilterBand::get_process(coeffs.process),
         }

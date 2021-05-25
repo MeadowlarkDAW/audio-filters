@@ -2073,13 +2073,13 @@ pub(crate) const CONST_BUTTERWORTHF32: [[f32; 32]; 32] = [
 ];
 #[cfg(test)]
 mod tests {
-    use crate::{units::butterworth_cascade_q, MAX_POLE_COUNT};
+    use crate::{units::butterworth_cascade_q, MAX_CASCADE_COUNT};
     #[test]
     fn print_butterworth_cascade_q_array() {
         print!("[");
-        for order in 0..MAX_POLE_COUNT {
+        for order in 0..MAX_CASCADE_COUNT {
             print!("[");
-            for pole in 0..MAX_POLE_COUNT {
+            for pole in 0..MAX_CASCADE_COUNT {
                 let odd = order % 2 == 1;
                 if order < 2 || (pole > order / 2 - 1 && !odd) || (pole > order / 2 && odd) {
                     print!("0.0,")

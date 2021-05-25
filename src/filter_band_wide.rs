@@ -4,13 +4,13 @@ use crate::{
     second_order_iir_wide::{WideIIR2, WideIIR2Coefficients},
     units::FP,
     wide_units::WIDE,
-    MAX_POLE_COUNT,
+    MAX_CASCADE_COUNT,
 };
 
 #[derive(Copy, Clone, Debug)]
 pub struct WideFilterBandCoefficients<T: WIDE> {
     pub iir1: WideIIR1Coefficients<T>,
-    pub iir2: [WideIIR2Coefficients<T>; MAX_POLE_COUNT],
+    pub iir2: [WideIIR2Coefficients<T>; MAX_CASCADE_COUNT],
     pub process: ProcessType,
     pub iir2_cascade_count: usize,
     pub iir1_enabled: bool,
@@ -35,7 +35,7 @@ impl<T: WIDE> WideFilterBandCoefficients<T> {
 #[derive(Copy, Clone)]
 pub struct WideFilterBand<T: WIDE> {
     iir1: WideIIR1<T>,
-    iir2: [WideIIR2<T>; MAX_POLE_COUNT],
+    iir2: [WideIIR2<T>; MAX_CASCADE_COUNT],
     iir2_cascade_count: usize,
     pub process: fn(&mut Self, T) -> T,
 }
@@ -44,7 +44,7 @@ impl<T: WIDE> WideFilterBand<T> {
     pub fn from(coeffs: &WideFilterBandCoefficients<T>) -> WideFilterBand<T> {
         WideFilterBand {
             iir1: WideIIR1::new(coeffs.iir1),
-            iir2: [WideIIR2::new(coeffs.iir2[0]); MAX_POLE_COUNT],
+            iir2: [WideIIR2::new(coeffs.iir2[0]); MAX_CASCADE_COUNT],
             iir2_cascade_count: coeffs.iir2_cascade_count,
             process: WideFilterBand::get_process(coeffs.process),
         }
