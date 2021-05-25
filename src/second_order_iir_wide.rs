@@ -12,7 +12,6 @@ pub struct WideIIR2Coefficients<T: WIDE> {
     pub m0: T,
     pub m1: T,
     pub m2: T,
-    pub fs: T,
 }
 
 impl<T: WIDE> WideIIR2Coefficients<T> {
@@ -26,7 +25,6 @@ impl<T: WIDE> WideIIR2Coefficients<T> {
         let m0 = T::from_w(coeffs.m0);
         let m1 = T::from_w(coeffs.m1);
         let m2 = T::from_w(coeffs.m2);
-        let fs = T::from_w(coeffs.fs);
         WideIIR2Coefficients {
             a,
             g,
@@ -38,7 +36,6 @@ impl<T: WIDE> WideIIR2Coefficients<T> {
             m0,
             m1,
             m2,
-            fs,
         }
     }
 
@@ -54,7 +51,6 @@ impl<T: WIDE> WideIIR2Coefficients<T> {
             m0: T::ZERO,
             m1: T::ZERO,
             m2: T::ZERO,
-            fs: T::ZERO,
         }
     }
 

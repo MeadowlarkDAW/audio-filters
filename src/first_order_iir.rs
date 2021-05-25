@@ -14,7 +14,6 @@ pub struct IIR1Coefficients<T: FP> {
     pub a1: T,
     pub m0: T,
     pub m1: T,
-    pub fs: T,
 }
 
 impl<T: FP> IIR1Coefficients<T> {
@@ -36,7 +35,6 @@ impl<T: FP> IIR1Coefficients<T> {
             a1: T::N0,
             m0: T::N0,
             m1: T::N0,
-            fs: T::N0,
         }
     }
 
@@ -47,14 +45,7 @@ impl<T: FP> IIR1Coefficients<T> {
         let a1 = g / (T::N1 + g);
         let m0 = T::N0;
         let m1 = T::N1;
-        IIR1Coefficients {
-            a,
-            g,
-            a1,
-            m0,
-            m1,
-            fs,
-        }
+        IIR1Coefficients { a, g, a1, m0, m1 }
     }
 
     pub fn highpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
@@ -64,14 +55,7 @@ impl<T: FP> IIR1Coefficients<T> {
         let a1 = g / (T::N1 + g);
         let m0 = T::N1;
         let m1 = -T::N1;
-        IIR1Coefficients {
-            a,
-            g,
-            a1,
-            m0,
-            m1,
-            fs,
-        }
+        IIR1Coefficients { a, g, a1, m0, m1 }
     }
 
     pub fn allpass(f0: T, _db_gain: T, fs: T) -> IIR1Coefficients<T> {
@@ -81,14 +65,7 @@ impl<T: FP> IIR1Coefficients<T> {
         let a1 = g / (T::N1 + g);
         let m0 = T::N1;
         let m1 = -T::N2;
-        IIR1Coefficients {
-            a,
-            g,
-            a1,
-            m0,
-            m1,
-            fs,
-        }
+        IIR1Coefficients { a, g, a1, m0, m1 }
     }
 
     pub fn lowshelf(f0: T, db_gain: T, fs: T) -> IIR1Coefficients<T> {
@@ -98,14 +75,7 @@ impl<T: FP> IIR1Coefficients<T> {
         let a1 = g / (T::N1 + g);
         let m0 = T::N1;
         let m1 = a - T::N1;
-        IIR1Coefficients {
-            a,
-            g,
-            a1,
-            m0,
-            m1,
-            fs,
-        }
+        IIR1Coefficients { a, g, a1, m0, m1 }
     }
 
     pub fn highshelf(f0: T, db_gain: T, fs: T) -> IIR1Coefficients<T> {
@@ -115,14 +85,7 @@ impl<T: FP> IIR1Coefficients<T> {
         let a1 = g / (T::N1 + g);
         let m0 = a;
         let m1 = T::N1 - a;
-        IIR1Coefficients {
-            a,
-            g,
-            a1,
-            m0,
-            m1,
-            fs,
-        }
+        IIR1Coefficients { a, g, a1, m0, m1 }
     }
 }
 

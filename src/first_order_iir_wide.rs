@@ -7,7 +7,6 @@ pub struct WideIIR1Coefficients<T: WIDE> {
     pub a1: T,
     pub m0: T,
     pub m1: T,
-    pub fs: T,
 }
 
 impl<T: WIDE> WideIIR1Coefficients<T> {
@@ -17,15 +16,7 @@ impl<T: WIDE> WideIIR1Coefficients<T> {
         let a1 = T::from_w(coeffs.a1);
         let m0 = T::from_w(coeffs.m0);
         let m1 = T::from_w(coeffs.m1);
-        let fs = T::from_w(coeffs.fs);
-        WideIIR1Coefficients {
-            a,
-            g,
-            a1,
-            m0,
-            m1,
-            fs,
-        }
+        WideIIR1Coefficients { a, g, a1, m0, m1 }
     }
 }
 
@@ -117,7 +108,6 @@ mod tests {
             a1: f64x2::from([c1.a1, c2.a1]),
             m0: f64x2::from([c1.m0, c2.m0]),
             m1: f64x2::from([c1.m1, c2.m1]),
-            fs: f64x2::from([c1.fs, c2.fs]),
         };
 
         let mut filter_left = WideIIR1::new(coeffs);

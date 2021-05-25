@@ -16,7 +16,6 @@ pub struct IIR2Coefficients<T: FP> {
     pub m0: T,
     pub m1: T,
     pub m2: T,
-    pub fs: T,
 }
 
 impl<T: FP> IIR2Coefficients<T> {
@@ -48,7 +47,6 @@ impl<T: FP> IIR2Coefficients<T> {
             m0: T::N0,
             m1: T::N0,
             m2: T::N0,
-            fs: T::N0,
         }
     }
 
@@ -78,7 +76,6 @@ impl<T: FP> IIR2Coefficients<T> {
             m0,
             m1,
             m2,
-            fs,
         }
     }
     pub fn highpass(f0: T, _db_gain: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
@@ -103,7 +100,6 @@ impl<T: FP> IIR2Coefficients<T> {
             m0,
             m1,
             m2,
-            fs,
         }
     }
     pub fn bandpass(f0: T, _db_gain: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
@@ -128,7 +124,6 @@ impl<T: FP> IIR2Coefficients<T> {
             m0,
             m1,
             m2,
-            fs,
         }
     }
     pub fn notch(f0: T, _db_gain: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
@@ -153,7 +148,6 @@ impl<T: FP> IIR2Coefficients<T> {
             m0,
             m1,
             m2,
-            fs,
         }
     }
     pub fn allpass(f0: T, _db_gain: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
@@ -178,7 +172,6 @@ impl<T: FP> IIR2Coefficients<T> {
             m0,
             m1,
             m2,
-            fs,
         }
     }
     pub fn lowshelf(f0: T, db_gain: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
@@ -203,7 +196,6 @@ impl<T: FP> IIR2Coefficients<T> {
             m0,
             m1,
             m2,
-            fs,
         }
     }
     pub fn highshelf(f0: T, db_gain: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
@@ -228,7 +220,6 @@ impl<T: FP> IIR2Coefficients<T> {
             m0,
             m1,
             m2,
-            fs,
         }
     }
     pub fn bell(f0: T, db_gain: T, q_value: T, fs: T) -> IIR2Coefficients<T> {
@@ -253,7 +244,6 @@ impl<T: FP> IIR2Coefficients<T> {
             m0,
             m1,
             m2,
-            fs,
         }
     }
 }
